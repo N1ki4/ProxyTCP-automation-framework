@@ -1,0 +1,9 @@
+version: '3'
+services:
+  app:
+    image: ciscotestautomation/pyats:21.3-full
+    stdin_open: true
+    tty: true
+    volumes:
+      -  ./requirements.txt:/pyats/requirements.txt
+      -  ./app:/pyats/app
