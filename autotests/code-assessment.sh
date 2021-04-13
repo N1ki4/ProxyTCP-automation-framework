@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 declare -a FAILURES
 
@@ -6,10 +6,10 @@ add_fail() {
     FAILURES+=("$1")
 }
 
-black --check . || add_fail black
-pylint app || add_fail pylint
-flake8 app || add_fail flake8
-pydocstyle app || add_fail pydocstyle
+black --check autotests || add_fail black
+pylint autotests || add_fail pylint
+flake8 autotests || add_fail flake8
+pydocstyle autotests || add_fail pydocstyle
 if [[ ${#FAILURES[@]} -ne 0 ]]; then
     cat <<RESULT
 ===================================================
@@ -22,4 +22,3 @@ RESULT
     done
     exit 11
 fi
-

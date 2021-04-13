@@ -1,0 +1,12 @@
+[flake8]
+max-complexity = 10
+max-line-length = 100
+statistics = True
+count = True
+
+# This section outlines ignored rules.
+ignore =
+    # W503 line break before binary operator
+    # As we use "W504 line break after binary operator", this has to be disabled. More on
+    # https://www.python.org/dev/peps/pep-0008/#should-a-line-break-before-or-after-a-binary-operator
+    W503,

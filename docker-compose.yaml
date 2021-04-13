@@ -1,9 +1,10 @@
 version: '3'
 services:
-  app:
+  testenv:
     image: ciscotestautomation/pyats:21.3-full
     stdin_open: true
-    tty: true
+    tty: true 
     volumes:
       -  ./requirements.txt:/pyats/requirements.txt
-      -  ./app:/pyats/app
+      -  ./workspace.init:/pyats/workspace.init
+      -  ./autotests:/pyats/autotests

@@ -1,0 +1,29 @@
+testbed:
+  name: proxy-test
+  credentials:
+    default:
+      username: test
+      password: "%ENC{gAAAAABgdVhCJwgj77Xu0L6-sojxsHaZ1znu7QHvi7cVRIApQX7Cmi6HF3hC9pEgcfp7X98k0rhvDf5Ab4Jm-hs60ZOWCycFKw==}"
+
+devices:
+  user_1:
+    os: linux
+    type: linux-vm
+    connections:
+      cli:
+        protocol: ssh
+        ip: 35.217.54.189
+  user_2:
+    os: linux
+    type: linux-vm
+    connections:
+      cli:
+        protocol: ssh
+        ip: 35.217.18.62
+  proxy:
+    os: linux
+    type: linux-vm
+    connections:
+      cli:
+        protocol: ssh
+        ip: 35.217.25.199
