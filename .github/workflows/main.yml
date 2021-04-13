@@ -1,0 +1,11 @@
+name: action-file
+
+on: push
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Docker run container with bash script
+        run: docker-compose run testenv bash ./project/code-assessment.sh
