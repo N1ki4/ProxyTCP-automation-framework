@@ -7,4 +7,4 @@ services:
     volumes:
       -  ./requirements.txt:/pyats/requirements.txt
       -  ./workspace.init:/pyats/workspace.init
-      -  ./autotests:/pyats/autotests
+      -  ./project:/pyats/project
