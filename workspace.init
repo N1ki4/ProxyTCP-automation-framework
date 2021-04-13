@@ -7,4 +7,4 @@ echo "string.representer = pyats.utils.secret_strings.FernetSecretStringRepresen
 echo "string.key = fgJzQnYmaMtPfjK8S43ld-N-nbpfJhJsDvuPX1Bh-I4=" >> $CONF
 
 # change mode for code-assessment.sh
-chmod +x ${WORKSPACE}/autotests/code-assessment.sh
+chmod +x ${WORKSPACE}/project/code-assessment.sh
