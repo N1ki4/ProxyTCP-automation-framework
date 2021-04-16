@@ -174,14 +174,3 @@ class Curl:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.fileutils.copy_from_device(src=self.datafiles["curl_file"])
         self.fileutils.copy_from_device(src=self.datafiles["pcap_file"])
-
-
-if __name__ == "__main__":
-
-    testbed = loader.load("../testbed.yaml")
-    device = testbed.devices["user-endpoint-1"]
-
-    with Curl(testbed, device) as curl:
-        curl.send(
-            host="https://tools.ietf.org/html/rfc1928", timeout=5, write_pcap=True
-        )
