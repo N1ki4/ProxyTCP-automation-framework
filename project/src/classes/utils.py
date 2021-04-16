@@ -4,7 +4,7 @@ import os
 import socket
 import re
 
-from pyats.topology import loader, Device, Testbed
+from pyats.topology import Device, Testbed
 from pyats.utils import secret_strings
 from paramiko import SSHClient
 from scp import SCPClient
