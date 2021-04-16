@@ -8,3 +8,5 @@ services:
       -  ./requirements.txt:/pyats/requirements.txt
       -  ./workspace.init:/pyats/workspace.init
       -  ./project:/pyats/project
+    environment:
+      -  PROJ_ROOT=/pyats/project

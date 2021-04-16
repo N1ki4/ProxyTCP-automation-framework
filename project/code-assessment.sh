@@ -6,10 +6,10 @@ add_fail() {
     FAILURES+=("$1")
 }
 
-black --check project || add_fail black
-pylint project || add_fail pylint
-flake8 project || add_fail flake8
-pydocstyle project || add_fail pydocstyle
+black --check /pyats/project/src || add_fail black
+pylint /pyats/project/src || add_fail pylint
+flake8 /pyats/project/src || add_fail flake8
+pydocstyle /pyats/project/src || add_fail pydocstyle
 if [[ ${#FAILURES[@]} -ne 0 ]]; then
     cat <<RESULT
 ===================================================

@@ -1,3 +1,4 @@
+scp==0.13.3
 black==20.8b1
 flake8==3.9.0
 pylint==2.7.4
