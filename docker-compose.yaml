@@ -8,5 +8,8 @@ services:
       -  ./requirements.txt:/pyats/requirements.txt
       -  ./workspace.init:/pyats/workspace.init
       -  ./project:/pyats/project
+      -  /etc/timezone:/etc/timezone:ro
+      -  /etc/localtime:/etc/localtime:ro
     environment:
       -  PROJ_ROOT=/pyats/project
+      -  PYTHONPATH=/pyats/project

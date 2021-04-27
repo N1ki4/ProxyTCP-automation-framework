@@ -8,8 +8,12 @@
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
+disable=logging-fstring-interpolation,
+        inconsistent-return-statements,
+        protected-access
 
 [MASTER]
+init-hook='import sys; sys.path.append("/pyats/project/src")'
 disable=
     C0114, # missing-module-docstring
 

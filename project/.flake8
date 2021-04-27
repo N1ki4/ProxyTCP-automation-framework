@@ -10,3 +10,5 @@ ignore =
     # As we use "W504 line break after binary operator", this has to be disabled. More on
     # https://www.python.org/dev/peps/pep-0008/#should-a-line-break-before-or-after-a-binary-operator
     W503,
+    # The backslash is redundant between brackets (E502)
+    E502,

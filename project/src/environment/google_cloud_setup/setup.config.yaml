@@ -1,0 +1,60 @@
+project:
+  id: testing-network-308220
+  network: vpc-temp
+  credentials:
+    service-acc-key: service-acc-key.json
+    access-scopes: [https://www.googleapis.com/auth/compute]
+
+instance-templates:
+  - name: main-template
+    machine-type: e2-medium
+    disk-size: 10
+    os: ubuntu-2004-lts
+
+instance-user:
+  name: test
+
+instances:
+  - name: user-1
+    zone: europe-north1-a
+    external-ip: ephemeral
+    tags: [usr]
+    from: main-template
+  - name: user-2
+    zone: europe-north1-a
+    external-ip: ephemeral
+    tags: [usr]
+    from: main-template
+  - name: proxy
+    zone: europe-north1-a
+    external-ip: ephemeral
+    tags: [proxy]
+    from: main-template
+  
+firewall-rules:
+  - name: allow-ssh3
+    source-ip-ranges: ["0.0.0.0/0"]
+    priority: 1000
+    tags:
+      -  usr
+      -  proxy
+    protocol: tcp
+    ports: ["22"]
+  - name: allow-socks2
+    source-ip-ranges: ["0.0.0.0/0"]
+    priority: 1000
+    tags: [proxy]
+    protocol: tcp
+    ports: ["1080"]
+  - name: allow-seleniumt2
+    source-ip-ranges: ["0.0.0.0/0"]
+    priority: 1000
+    tags: [proxy]
+    protocol: tcp
+    ports: 
+      -  "4444"
+      -  "5555"
+
+
+
+

@@ -174,3 +174,19 @@ class Curl:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.fileutils.copy_from_device(src=self.datafiles["curl_file"])
         self.fileutils.copy_from_device(src=self.datafiles["pcap_file"])
+
+
+if __name__ == "__main__":
+
+    from pyats.topology import loader
+    
+    tb = loader.load('../testbed.yaml')
+    dc = tb.devices['user-endpoint-1']
+    
+    with Curl(testbed=tb, device=dc) as curl:
+
+        curl.send(
+            host="https://wiki.archlinux.org/",
+            timeout=5,
+            write_pcap=True
+        )
