@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import os
 
 from pyats import aetest
