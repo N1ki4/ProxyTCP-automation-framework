@@ -1,0 +1,41 @@
+# Ansible playbook for installing ProxyTCP
+---
+- hosts: proxy
+  become: yes
+  vars: 
+    linux_user: "ubuntu"
+  tasks:
+
+  - name: Clone ProxyTCP Repository.
+    ansible.builtin.git:
+      repo: "https://github.com/vizhyk/proxytcp.git"
+      dest: /home/{{ linux_user }}/proxytcp
+  
+  - name: Clone Googletest repository to the project directory
+    ansible.builtin.git:
+      repo: "https://github.com/google/googletest.git"
+      dest: /home/{{ linux_user }}/proxytcp/googletest
+  
+  - name: Install necessary packages.
+    apt:
+      name: "{{ item }}"
+      state: present
+    loop:
+      - cmake
+      - build-essential
+
+  - name: Copy zconf.h file to the remote machine
+    copy:
+      remote_src: false
+      src: ./files/zconf.h
+      dest: /usr/include/x86_64-linux-gnu/
+
+  - name: Build Google test library
+    ansible.builtin.shell: cmake . && cmake --build .
+    args:
+      chdir: /home/{{ linux_user }}/proxytcp/googletest
+  
+  - name: Build Project from project root
+    ansible.builtin.shell: cmake . && cmake --build .
+    args:
+      chdir: /home/{{ linux_user }}/proxytcp

@@ -1,0 +1,24 @@
+# Ansible playbook Tshark - install tshark
+---
+- hosts: all
+  become: yes
+  tasks:
+
+  - name: Let non root to capture traffic
+    ansible.builtin.debconf:
+      name: wireshark-common
+      question: wireshark-common/install-setuid
+      value: 'true'
+      vtype: boolean  
+
+  - name: Install CLI wireshark (TShark)
+    apt:
+      name: tshark
+      state: present
+      update_cache: yes
+  
+  - name: Add user to wireshark group
+    user:
+      name: "{{ ansible_user }}"
+      groups: wireshark
+  

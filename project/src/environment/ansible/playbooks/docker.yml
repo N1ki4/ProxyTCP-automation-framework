@@ -1,0 +1,65 @@
+# Ansible playbook AWS - install docker (2021)
+---
+- hosts: users
+  become: yes
+  vars: 
+    docker_compose_version: "1.29.0"
+  tasks:
+
+    - name: Update packages
+      apt: update_cache=yes cache_valid_time=3600
+    
+    - name: Upgrade packages
+      apt: upgrade=dist
+    
+    - name: Install all packages needed for docker
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - curl 
+        - gnupg-agent 
+        - software-properties-common
+
+    - name: Add Docker’s official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add repository to set up the stable docker version
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Docker installation
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      loop:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+    
+    - name: Add user to docker group, append to existing groups
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker, wireshark
+        append: yes
+    
+    - name: Download docker-compose {{ docker_compose_version }}
+      get_url:
+        url: https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64
+        dest: ~/docker-compose
+        mode: '+x'
+    
+    - name: Check docker-compose exists
+      stat: path=~/docker-compose
+      register: docker_compose
+
+    - name: Move docker-compose to /usr/local/bin/docker-compose
+      command: mv ~/docker-compose /usr/local/bin/docker-compose
+      when: docker_compose.stat.exists
