@@ -141,8 +141,10 @@ class NetworkController(Controller):
     def get(self):
         """Build and send API 'get' request."""
         method = "GET"
-        url = f"https://www.googleapis.com/compute/v1/projects/{self._project.id}" \
+        url = (
+            f"https://www.googleapis.com/compute/v1/projects/{self._project.id}"
             f"/global/networks/{self._project.network}"
+        )
 
         response = self._session.request(method=method, url=url)
         return response
@@ -152,8 +154,10 @@ class NetworkController(Controller):
         """Build and send API 'delete' request."""
 
         method = "DELETE"
-        url = f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/global" \
+        url = (
+            f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/global"
             f"/networks/{self._project.network}"
+        )
 
         response = self._session.request(method=method, url=url)
         self._wait_for_deletion_complete()
@@ -221,13 +225,15 @@ class InstanceController(Controller):
     def create(self):
         """Build and send API 'insert' request."""
         method = "POST"
-        url = f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/zones" \
+        url = (
+            f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/zones"
             f"/{self._instance.zone}/instances"
+        )
         body = {
             "name": self._instance.name,
             "zone": f"projects/{self._project.id}/zones/{self._instance.zone}",
-            "machineType": f"projects/{self._project.id}/zones/{self._instance.zone}" \
-                           f"/machineTypes/{self._template.machine_type}",
+            "machineType": f"projects/{self._project.id}/zones/{self._instance.zone}"
+            f"/machineTypes/{self._template.machine_type}",
             "tags": {"items": self._instance.tags},
             "disks": [
                 {
@@ -237,10 +243,10 @@ class InstanceController(Controller):
                     "autoDelete": True,
                     "deviceName": self._instance.name,
                     "initializeParams": {
-                        "sourceImage": f"projects/ubuntu-os-cloud/global/images/family" \
-                                       f"/{self._template.os}",
-                        "diskType": f"projects/{self._project.id}/zones/{self._instance.zone}" \
-                                    f"/diskTypes/pd-balanced",
+                        "sourceImage": f"projects/ubuntu-os-cloud/global/images/family"
+                        f"/{self._template.os}",
+                        "diskType": f"projects/{self._project.id}/zones/{self._instance.zone}"
+                        f"/diskTypes/pd-balanced",
                         "diskSizeGb": str(self._template.disk_size),
                     },
                     "diskEncryptionKey": {},
@@ -249,9 +255,9 @@ class InstanceController(Controller):
             "canIpForward": True,
             "networkInterfaces": [
                 {
-                    "subnetwork": f"projects/{self._project.id}/regions" \
-                                  f"/{self._identify_subnet()}/subnetworks" \
-                                  f"/{self._project.network}",
+                    "subnetwork": f"projects/{self._project.id}/regions"
+                    f"/{self._identify_subnet()}/subnetworks"
+                    f"/{self._project.network}",
                     "accessConfigs": [
                         {
                             "name": "External NAT",
@@ -287,8 +293,10 @@ class InstanceController(Controller):
     def get(self):
         """Build and send API 'get' request."""
         method = "GET"
-        url = f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/zones" \
-              f"/{self._instance.zone}/instances/{self._instance.name}"
+        url = (
+            f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/zones"
+            f"/{self._instance.zone}/instances/{self._instance.name}"
+        )
 
         response = self._session.request(method=method, url=url)
         return response
@@ -298,8 +306,10 @@ class InstanceController(Controller):
         """Build and send API 'delete' request."""
 
         method = "DELETE"
-        url = f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/zones" \
-              f"/{self._instance.zone}/instances/{self._instance.name}"
+        url = (
+            f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/zones"
+            f"/{self._instance.zone}/instances/{self._instance.name}"
+        )
 
         response = self._session.request(method=method, url=url)
         self._wait_for_deletion_complete()
@@ -363,8 +373,10 @@ class FirewallController(Controller):
     def get(self):
         """Build and send API 'get' request."""
         method = "GET"
-        url = f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/global" \
-              f"/firewalls/{self._firewall_rule.name}"
+        url = (
+            f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/global"
+            f"/firewalls/{self._firewall_rule.name}"
+        )
 
         response = self._session.request(method=method, url=url)
         return response
@@ -373,8 +385,10 @@ class FirewallController(Controller):
         """Build and send API 'delete' request."""
 
         method = "DELETE"
-        url = f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/global" \
-              f"/firewalls/{self._firewall_rule.name}"
+        url = (
+            f"https://www.googleapis.com/compute/v1/projects/{self._project.id}/global"
+            f"/firewalls/{self._firewall_rule.name}"
+        )
 
         response = self._session.request(method=method, url=url)
         self._wait_for_deletion_complete()

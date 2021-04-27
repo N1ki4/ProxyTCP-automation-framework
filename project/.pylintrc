@@ -13,9 +13,10 @@ disable=logging-fstring-interpolation,
         protected-access
 
 [MASTER]
-init-hook='import sys; sys.path.append("/pyats/project/src")'
+init-hook='import sys; sys.path.append("/pyats/project")'
 disable=
     C0114, # missing-module-docstring
+    C0116,  # missing-function-docstring
 
 [BASIC]
 # Regular expression matching correct constant names
@@ -57,7 +58,7 @@ max-statements=50
 max-parents=5
 
 # Maximum number of attributes for a class (see R0902).
-max-attributes=5
+max-attributes=10
 
 # Minimum number of public methods for a class (see R0903).
 min-public-methods=1

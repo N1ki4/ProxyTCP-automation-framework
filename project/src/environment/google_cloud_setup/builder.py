@@ -9,11 +9,19 @@ _log = logging.getLogger(__name__)
 
 
 class Builder:
+    """Main class."""
 
     _keys = ("project", "instance-templates", "instances", "firewall-rules")
 
-    def __init__(self, build_file: str):
-        """Load and parse setup.config.yaml file into python objects."""
+    def __init__(self, build_file: str, service_acc_key: str = None):
+        """Load and parse setup.config.yaml file into python objects.
+
+        Args:
+            build_file (str): path to the setup configuration yaml file.
+            service_acc_key (str): path to service account secret key file,
+                if not specified, value of the path will be taken from the build
+                file.
+        """
 
         self._build = None
         self._project = None
@@ -25,8 +33,8 @@ class Builder:
         self._key = None
 
         def load_yaml(file: str) -> dict:
-            with open(file) as x:
-                return yaml.load(x, Loader=yaml.FullLoader)
+            with open(file) as conf_file:
+                return yaml.load(conf_file, Loader=yaml.FullLoader)
 
         build = load_yaml(build_file)
         self._build = build
@@ -38,6 +46,8 @@ class Builder:
             network=build["project"]["network"],
             credentials=build["project"]["credentials"],
         )
+        if service_acc_key is not None:
+            self._project.credentials["service-acc-key"] = service_acc_key
         self._templates = [
             components.InstTemplate(
                 name=entry["name"],
@@ -218,8 +228,8 @@ class Builder:
                         "type": "linux-vm",
                         "connections": {
                             "cli": {
-                                "command": f'ssh -i {self._key} {self._user}' \
-                                           f'@{device_data.get("nat_ip")}'
+                                "command": f"ssh -i {self._key} {self._user}"
+                                f'@{device_data.get("nat_ip")}'
                             },
                         },
                     },
@@ -262,7 +272,9 @@ class Builder:
 
 
 if __name__ == "__main__":
-    builder = Builder("setup.config.yaml")
+    builder = Builder(
+        build_file="setup.config.yaml", service_acc_key="service-acc-key.json"
+    )
     builder.execute_setup_scenario()
     # builder.add_ssh_keys()
     # builder.generate_ansible_configs()
