@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import os
 
 from pyats import aetest
@@ -49,3 +50,4 @@ if __name__ == "__main__":
 
     args, sys.argv[1:] = parser.parse_known_args(sys.argv[1:])
     aetest.main(service_key=args.service_key)
+
