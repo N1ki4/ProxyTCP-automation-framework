@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd /pyats/project
+
 declare -a FAILURES
 
 add_fail() {
