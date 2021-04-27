@@ -1,7 +1,8 @@
 import os
 
 from pyats import aetest
-from ansible_runner import ansible_runner
+import ansible_runner
+
 import src
 from src.environment.google_cloud_setup import builder
 
@@ -44,7 +45,7 @@ class AnsibleSetup(aetest.Testcase):
     """Run playbooks. Setup docker, tshark and proxy."""
 
     @aetest.test
-    def main(self, steps, root):
+    def main(self, root):
         _ansible_root = os.path.join(root, "environment", "ansible")
         ansible_runner.run(project_dir=_ansible_root, playbook="main.yml")
 
@@ -55,7 +56,9 @@ if __name__ == "__main__":
     import logging
 
     logging.getLogger(__name__).setLevel(logging.DEBUG)
-    logging.getLogger('src.environment.google_cloud_setup.builder').setLevel(logging.DEBUG)
+    logging.getLogger("src.environment.google_cloud_setup.builder").setLevel(
+        logging.DEBUG
+    )
 
     parser = argparse.ArgumentParser(description="standalone parser")
     parser.add_argument("--service-key", dest="service_key")

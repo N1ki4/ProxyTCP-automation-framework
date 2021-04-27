@@ -198,11 +198,11 @@ class Builder:
             private_key_file = os.path.join(os.getcwd(), "cloud_access.key")
         manager = sshmanager.SshManager(self._project, self._user)
         manager.create_keys(private_key_file)
-        # manager.send_pub_key_to_cloud()
+        manager.send_pub_key_to_cloud()
         self._key = private_key_file
         _log.info(
-            f"Generated RSA key pair for user `{self._user}`, path to private" \
-                "key: `{private_key_file}`"
+            f"Generated RSA key pair for user `{self._user}`, path to private"
+            "key: `{private_key_file}`"
         )
 
     def generate_testbed(self, testbed_file="testbed.yaml"):

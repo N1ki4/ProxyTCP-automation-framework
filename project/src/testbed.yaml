@@ -2,7 +2,7 @@ testbed:
   name: testing-network-308220
   credentials:
     default:
-      name: test
+      name: ubuntu
       password: ''
 devices:
   user-1:
@@ -11,18 +11,18 @@ devices:
     connections:
       cli:
         command: ssh -i /pyats/project/src/environment/google_cloud_setup/cloud_access.key
-          test@35.228.244.17
+          ubuntu@35.228.8.207
   user-2:
     os: linux
     type: linux-vm
     connections:
       cli:
         command: ssh -i /pyats/project/src/environment/google_cloud_setup/cloud_access.key
-          test@35.228.30.91
-  proxy:
+          ubuntu@35.228.30.91
+  proxy-vm:
     os: linux
     type: linux-vm
     connections:
       cli:
         command: ssh -i /pyats/project/src/environment/google_cloud_setup/cloud_access.key
-          test@35.228.113.39
+          ubuntu@35.228.244.17
