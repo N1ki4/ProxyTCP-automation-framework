@@ -12,7 +12,7 @@ instance-templates:
     os: ubuntu-2004-lts
 
 instance-user:
-  name: test
+  name: ubuntu
 
 instances:
   - name: user-1
@@ -25,7 +25,7 @@ instances:
     external-ip: ephemeral
     tags: [usr]
     from: main-template
-  - name: proxy-inst
+  - name: proxy-vm
     zone: europe-north1-a
     external-ip: ephemeral
     tags: [proxy]
