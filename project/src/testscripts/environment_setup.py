@@ -1,7 +1,7 @@
 import os
 
 from pyats import aetest
-
+from ansible_runner import ansible_runner
 import src
 from src.environment.google_cloud_setup import builder
 
@@ -38,6 +38,15 @@ class GoogleCloudSetup(aetest.Testcase):
             )
         with steps.start("Generating testbed"):
             setup.generate_testbed(testbed_file=_testbed)
+
+
+class AnsibleSetup(aetest.Testcase):
+    """Run playbooks. Setup docker, tshark and proxy."""
+
+    @aetest.test
+    def main(self, steps, root):
+        _ansible_root = os.path.join(root, "environment", "ansible")
+        ansible_runner.run(project_dir=_ansible_root, playbook="main.yml")
 
 
 if __name__ == "__main__":
