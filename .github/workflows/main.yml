@@ -8,4 +8,4 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Docker run container with bash script
-        run: docker-compose run testenv bash ./project/code-assessment.sh
+        run: docker-compose run testenv bash (cd project; ./code-assessment.sh)
