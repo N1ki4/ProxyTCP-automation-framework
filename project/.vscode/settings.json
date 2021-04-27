@@ -1,4 +1,0 @@
-{
-    "python.pythonPath": "/pyats/bin/python",
-    "python.autoComplete.extraPaths": ["/pyats/lib/python3.6/site-packages"]
-}
