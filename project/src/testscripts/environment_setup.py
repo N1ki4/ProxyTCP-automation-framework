@@ -43,6 +43,10 @@ class GoogleCloudSetup(aetest.Testcase):
 if __name__ == "__main__":
     import sys
     import argparse
+    import logging
+
+    logging.getLogger(__name__).setLevel(logging.DEBUG)
+    logging.getLogger('src.environment.google_cloud_setup.builder').setLevel(logging.DEBUG)
 
     parser = argparse.ArgumentParser(description="standalone parser")
     parser.add_argument("--service-key", dest="service_key")

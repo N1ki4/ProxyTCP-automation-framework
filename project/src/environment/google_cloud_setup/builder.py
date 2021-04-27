@@ -4,7 +4,6 @@ import yaml
 
 from src.environment.google_cloud_setup import components, controllers, sshmanager
 
-logging.basicConfig(level=logging.INFO)
 _log = logging.getLogger(__name__)
 
 
@@ -202,8 +201,8 @@ class Builder:
         # manager.send_pub_key_to_cloud()
         self._key = private_key_file
         _log.info(
-            f"Generated RSA key pair for user `{self._user}`, path to private' \
-                'key: `{private_key_file}`"
+            f"Generated RSA key pair for user `{self._user}`, path to private" \
+                "key: `{private_key_file}`"
         )
 
     def generate_testbed(self, testbed_file="testbed.yaml"):
@@ -269,14 +268,3 @@ class Builder:
         with open(groups, "w") as file:
             file.write(content)
         _log.info(f"Created ansible config files `{general}`, `{groups}`")
-
-
-if __name__ == "__main__":
-    builder = Builder(
-        build_file="setup.config.yaml", service_acc_key="service-acc-key.json"
-    )
-    builder.execute_setup_scenario()
-    # builder.add_ssh_keys()
-    # builder.generate_ansible_configs()
-    # builder.generate_testbed()
-    # builder.execute_teardown_scenario()
