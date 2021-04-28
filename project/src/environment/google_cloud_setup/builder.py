@@ -244,7 +244,7 @@ class Builder:
                             "ens4": {
                                 "link": "interconnect",
                                 "type": "ethernet",
-                                "ipv4": f'{device_data.get("net_ip")}/20',
+                                "ipv4": f'{device_data.get("network_ip")}/20',
                             }
                         },
                     },
