@@ -63,3 +63,12 @@
     - name: Move docker-compose to /usr/local/bin/docker-compose
       command: mv ~/docker-compose /usr/local/bin/docker-compose
       when: docker_compose.stat.exists
+
+    - name: Copy docker-compose file to user endpoint
+      copy:
+        remote_src: false
+        src: ./files/docker-compose.yml
+        dest: /home/ubuntu/
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
