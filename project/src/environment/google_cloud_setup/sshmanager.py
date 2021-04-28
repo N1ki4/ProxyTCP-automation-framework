@@ -32,7 +32,7 @@ class SshManager:
         )
         self._private_key = key.private_bytes(
             crypto_serialization.Encoding.PEM,
-            crypto_serialization.PrivateFormat.PKCS8,
+            crypto_serialization.PrivateFormat.OpenSSH,
             crypto_serialization.NoEncryption(),
         ).decode("utf-8")
         if private_key_file:

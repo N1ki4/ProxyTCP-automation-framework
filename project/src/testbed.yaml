@@ -26,3 +26,23 @@ devices:
       cli:
         command: ssh -i /pyats/project/src/environment/google_cloud_setup/cloud_access.key
           ubuntu@35.228.244.17
+
+topology:
+  proxy-vm:
+    interfaces:
+      ens4:
+        link: interconnect
+        type: ethernet
+        ipv4: 10.166.0.4/20
+  user-1:
+    interfaces:
+      ens4:
+        link: interconnect
+        type: ethernet
+        ipv4: 10.166.0.2/20
+  user-2:
+    interfaces:
+      ens4:
+        link: interconnect
+        type: ethernet
+        ipv4: 10.166.0.3/20

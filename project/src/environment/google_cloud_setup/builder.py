@@ -202,7 +202,7 @@ class Builder:
         self._key = private_key_file
         _log.info(
             f"Generated RSA key pair for user `{self._user}`, path to private"
-            "key: `{private_key_file}`"
+            f"key: `{private_key_file}`"
         )
 
     def generate_testbed(self, testbed_file="testbed.yaml"):
@@ -217,6 +217,7 @@ class Builder:
                 },
             },
             "devices": dict(),
+            "topology": dict(),
         }
         for entry in self._instances:
             device_data = self._response_data.get(entry.name)
@@ -230,6 +231,21 @@ class Builder:
                                 "command": f"ssh -i {self._key} {self._user}"
                                 f'@{device_data.get("nat_ip")}'
                             },
+                        },
+                    },
+                }
+            )
+        for entry in self._instances:
+            device_data = self._response_data.get(entry.name)
+            testbed["topology"].update(
+                {
+                    device_data.get("name"): {
+                        "interfaces": {
+                            "ens4": {
+                                "link": "interconnect",
+                                "type": "ethernet",
+                                "ipv4": f'{device_data.get("net_ip")}/20',
+                            }
                         },
                     },
                 }

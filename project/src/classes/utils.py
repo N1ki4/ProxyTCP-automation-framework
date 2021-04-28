@@ -5,13 +5,15 @@ import socket
 import re
 
 from pyats.topology import Device, Testbed
-from pyats.utils import secret_strings
 from paramiko import SSHClient
+import paramiko
 from scp import SCPClient
 
+import src
 
-FILE_DIR = os.path.join(os.environ["PROJ_ROOT"], "src", "temp")
-# path to temporary files directory: /pyats/project/src/temp
+
+_root = src.__path__[0]
+_temp_files_dir = os.path.join(_root, "temp")
 
 
 class FileUtils:
@@ -24,33 +26,34 @@ class FileUtils:
     @property
     def connection_data(self) -> dict:
         """Device address and credentials."""
-        return {
-            "address": str(self.device.connections.cli.ip),
-            "username": self.testbed.credentials.default.username,
-            "password": secret_strings.to_plaintext(
-                self.testbed.credentials.default.password
-            ),
-        }
+        connection = self.device.connections.cli.command
+        host = re.compile(r"ssh -i (/.*)+\s(\w+)@(.*)").search(connection)[3]
+        username = re.compile(r"ssh -i (/.*)+\s(\w+)@(.*)").search(connection)[2]
+        key_filename = re.compile(r"ssh -i (/.*)+\s(\w+)@(.*)").search(connection)[1]
+        key = paramiko.RSAKey.from_private_key_file(key_filename)
 
-    def copy_from_device(self, src: str) -> None:
+        return {"host": host, "username": username, "pkey": key}
+
+    def copy_from_device(self, source: str) -> None:
         """Copy file from a device.
 
         Args:
-            src (str): filename on the device to copy
+            source (str): filename on the device to copy
         """
         local_file_name = f"{self.device.name}_{src}"
-        full_file_path = os.path.join(FILE_DIR, local_file_name)
+        full_file_path = os.path.join(_temp_files_dir, local_file_name)
         with SSHClient() as ssh:
-            ssh.load_system_host_keys()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh.connect(
-                self.connection_data["address"],
+                self.connection_data["host"],
                 username=self.connection_data["username"],
-                password=self.connection_data["password"],
+                password="",
+                pkey=self.connection_data["pkey"],
                 allow_agent=False,
             )
 
             with SCPClient(ssh.get_transport()) as scp:
-                scp.get(remote_path=src, local_path=full_file_path)
+                scp.get(remote_path=source, local_path=full_file_path)
 
 
 class DumpCon:
@@ -84,7 +87,6 @@ class DumpCon:
         """
         base_command = "tshark"
         params = {
-            "-i": self._get_default_interface(),
             "-f": f'"{filters}"',
             "-w": capfile,
         }
@@ -161,7 +163,7 @@ class Curl:
 
         with DumpCon(self.device) as con:
             if write_pcap is True:
-                ip_filter = self.get_host_ip(host)
+                ip_filter = self.get_host_ip(host) if not proxy_host else proxy_host
                 con.start_tshark(
                     filters=f"host {ip_filter}",
                     capfile=self.datafiles["pcap_file"],
@@ -172,17 +174,5 @@ class Curl:
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.fileutils.copy_from_device(src=self.datafiles["curl_file"])
-        self.fileutils.copy_from_device(src=self.datafiles["pcap_file"])
-
-
-if __name__ == "__main__":
-
-    from pyats.topology import loader
-
-    tb = loader.load("../testbed.yaml")
-    dc = tb.devices["user-endpoint-1"]
-
-    with Curl(testbed=tb, device=dc) as curl:
-
-        curl.send(host="https://wiki.archlinux.org/", timeout=5, write_pcap=True)
+        self.fileutils.copy_from_device(source=self.datafiles["curl_file"])
+        self.fileutils.copy_from_device(source=self.datafiles["pcap_file"])
