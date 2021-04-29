@@ -49,7 +49,7 @@ firewall-rules:
   - name: allow-seleniumt2
     source-ip-ranges: ["0.0.0.0/0"]
     priority: 1000
-    tags: [proxy]
+    tags: [usr]
     protocol: tcp
     ports: 
       -  "4444"
