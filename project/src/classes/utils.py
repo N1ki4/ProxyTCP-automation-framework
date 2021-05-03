@@ -4,7 +4,7 @@ import re
 import paramiko
 from paramiko import SSHClient
 from scp import SCPClient
-from pyats.topology import Device, Testbed
+from pyats.topology import Device
 
 import src
 
@@ -16,8 +16,7 @@ _temp_files_dir = os.path.join(_root, "temp")
 class FileUtils:
     """Allows file transfer between testing host and devices."""
 
-    def __init__(self, testbed: Testbed, device: Device):
-        self.testbed = testbed
+    def __init__(self, device: Device):
         self.device = device
 
     @property
@@ -53,44 +52,29 @@ class FileUtils:
                 scp.get(remote_path=source, local_path=full_file_path)
 
 
-class DumpCon:
-    """Connection context manager with the packet capturing feature."""
+class TShark:
+    """TShark."""
 
-    def __init__(self, device: Device):
-        self.device = device
+    def __init__(self, device: Device, capfile: str = None):
+        self._device = device
 
-    def _kill_process(self, name: str) -> None:
-        """Kill active process running on the device.
+        # default network interface of the device
+        self._interface = device.interfaces.names.pop()
 
-        Args:
-            name (str): name of the process to kill
-        """
-        self.device.execute("echo -ne '\n'")
-        pid = self.device.execute(f"pidof {name}")
-        if pid:
-            command = f"kill -15 {pid}"
-            self.device.execute(command + "&& echo -ne '\n'")
+        # traffic capture file
+        self._capfile = capfile if capfile else "tshark.pcap"
 
-    def _get_default_interface(self) -> str:
-        """Get default internet traffic interface."""
-        command = "route | grep '^default' | grep -o '[^ ]*$'"
-        return self.device.execute(command)
-
-    def start_tshark(
-        self, interface: str = None, filters: str = None, capfile: str = None
-    ) -> None:
+    def start(self, filters: str = None) -> None:
         """Start packet capturing with tshark.
 
         Args:
-            interface (str): capture interface
             filters (str): capture filters
-            capfile (str): name of pcap file to save results
         """
         base_command = "tshark"
         params = {
-            "-i": interface,
-            "-f": f'"{filters}"',
-            "-w": capfile,
+            "-i": self._interface,
+            "-f": f'"{filters}"' if filters else None,
+            "-w": self._capfile,
         }
         background = "-q &"
         command = base_command
@@ -98,12 +82,72 @@ class DumpCon:
             if v is not None:
                 command += f" {k} {v}"
         command += f" {background}"
-        self.device.execute(command)
+        self._device.tshark.execute(command)
+
+    def stop(self) -> None:
+        """Kill active tshark process running on the device."""
+        self._device.tshark.execute("echo -ne '\n'")
+        pid = self._device.tshark.execute("pidof tshark")
+        if pid:
+            command = f"kill -15 {pid}"
+            self._device.tshark.execute(command + "&& echo -ne '\n'")
+
+
+class TrafficCaptureConnection:
+    """Connection for traffic monitoring.
+
+    If no proxy is specified only one connection is established - to traffic source (user_endpoint)
+    If proxy is specified two connections are established - to tarffic source and to the proxy host
+    """
+
+    def __init__(self, user_endpoint: Device, proxy_host: Device = None):
+        # main device
+        self._user = user_endpoint
+        # fileutils for pcap transfer
+        self._user_fileutils = FileUtils(user_endpoint)
+        # tshark instance
+        self._user_tshark = None
+
+        # proxy device
+        self._proxy = proxy_host
+        # fileutils for pcap transfer
+        self._proxy_fileutils = FileUtils(proxy_host) if proxy_host else None
+        # tshark instance
+        self._proxy_tshark = None
+
+    def start_capturing(self, filters: str = None) -> None:
+        # if proxy specified reconfigure filters
+        if self._proxy:
+            proxy_filters = filters
+            user_filters = (
+                "host "
+                f"{self._proxy.interfaces[self._proxy_tshark._interface].ipv4.ip.compressed}"
+            )
+
+            # start capturing
+            self._proxy_tshark.start(filters=proxy_filters)
+            self._user_tshark.start(filters=user_filters)
+        else:
+            # start capturing
+            self._user_tshark.start(filters=filters)
 
     def __enter__(self):
-        self.device.connect()
+        # connect to devices and instantiate tshark
+        self._user.connect(alias="tshark")
+        self._user_tshark = TShark(self._user)
+
+        if self._proxy:
+            self._proxy.connect(alias="tshark")
+            self._proxy_tshark = TShark(self._proxy)
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self._kill_process("tshark")
-        self.device.disconnect()
+        # disconnect from devices and copy pcap files
+        self._user_tshark.stop()
+        self._user.tshark.disconnect()
+        self._user_fileutils.copy_from_device(source=self._user_tshark._capfile)
+
+        if self._proxy:
+            self._proxy_tshark.stop()
+            self._proxy.tshark.disconnect()
+            self._proxy_fileutils.copy_from_device(source=self._proxy_tshark._capfile)
