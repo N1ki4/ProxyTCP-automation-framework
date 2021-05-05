@@ -12,3 +12,5 @@ ignore =
     W503,
     # The backslash is redundant between brackets (E502)
     E502,
+    E203,
+    # whitespace before ':'
