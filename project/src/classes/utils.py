@@ -77,6 +77,7 @@ class TShark:
             "-w": self._capfile,
         }
         background = "-q &"
+
         command = base_command
         for k, v in params.items():
             if v is not None:

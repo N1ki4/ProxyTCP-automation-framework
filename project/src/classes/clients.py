@@ -11,6 +11,7 @@ from selenium.common import exceptions
 from pyats.topology import Device
 
 from src.classes import utils
+from src.classes.analyse import BrowserStatKeys
 
 _log = logging.getLogger(__name__).setLevel(logging.INFO)
 logging.getLogger("unicon").setLevel(logging.ERROR)
@@ -52,7 +53,7 @@ class ChromeBase(ABC):
                 chromeoptions.add_argument(entry)
         self._chromeoptions = chromeoptions
 
-        # enable logging
+        # enable logging (do not change)
         self._chromeoptions.capabilities["goog:loggingPrefs"] = {
             "performance": "ALL",
             "browser": "ALL",
@@ -170,13 +171,13 @@ class Chrome(ChromeBase):
             browser_logs = self._driver.get_log("browser")
 
             stats = {
-                "loading_time": loading_time,
-                "performance_logs": perfornace_logs,
-                "browser_logs": browser_logs,
+                BrowserStatKeys.LOADING_TIME: loading_time,
+                BrowserStatKeys.PERF_LOGS: perfornace_logs,
+                BrowserStatKeys.BROW_LOGS: browser_logs,
             }
         else:
             error = self._exceptions[0]
-            stats = {"critical_error": error.msg}
+            stats = {BrowserStatKeys.CRIT_ERROR: error.msg}
         if isinstance(file, str):
             with open(file, "w") as f:
                 f.write(json.dumps(stats))
@@ -203,6 +204,7 @@ class ChromeAsync(ChromeBase):
 
     def _init_drivers(self, amount: int):
         """Initialize drivers."""
+        self._drivers = []
         if isinstance(amount, int):
             for _ in range(amount):
                 self._drivers.append(
@@ -287,9 +289,9 @@ class ChromeAsync(ChromeBase):
 
             stats.append(
                 {
-                    "loading_time": loading_time,
-                    "performance_logs": perfornace_logs,
-                    "browser_logs": browser_logs,
+                    BrowserStatKeys.LOADING_TIME: loading_time,
+                    BrowserStatKeys.PERF_LOGS: perfornace_logs,
+                    BrowserStatKeys.BROW_LOGS: browser_logs,
                 }
             )
         if isinstance(file, str):
@@ -401,13 +403,13 @@ class Curl:
 #         "--ignore-ssl-errors=yes"
 #     ]
 
-#     # # single chrome no proxy no pcap
-#     # with Chrome(device) as chrome:
-#     #     chrome.open(
-#     #         host='https://receipt1.seiko-cybertime.jp',
-#     #         write_pcap=False,
-#     #     )
-#     #     chrome.get_stats('singlechrome_nopcap_noproxy.json')
+# # single chrome no proxy no pcap
+# with Chrome(device) as chrome:
+#     chrome.open(
+#         host='https://receipt1.seiko-cybertime.jp',
+#         write_pcap=False,
+#     )
+#     chrome.get_stats('singlechrome_nopcap_noproxy.json')
 
 #     # # single chrome no proxy pcap
 #     # with Chrome(device) as chrome:
