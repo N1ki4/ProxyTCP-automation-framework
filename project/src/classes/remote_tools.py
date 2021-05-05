@@ -1,3 +1,6 @@
+import time
+
+
 from pyats.topology import Device
 
 
@@ -8,6 +11,7 @@ class SeleniumGrid:
     def start(self):
         self._device.connect(alias="grid")
         self._device.grid.execute("docker-compose start")
+        time.sleep(10)  # temporary solution
 
     def stop(self):
         self._device.grid.execute("docker-compose stop")
