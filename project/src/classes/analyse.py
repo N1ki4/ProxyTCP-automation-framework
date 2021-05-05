@@ -12,7 +12,7 @@ class BrowserStatKeys:
     CRIT_ERROR = "critical_error"
 
 
-def serializer(response: Union[list, dict]):
+def serializer(response: Union[list, dict]) -> Union[list, dict]:
     """Serialize response data."""
     key = BrowserStatKeys.PERF_LOGS
 
@@ -55,11 +55,11 @@ class BrowserResponseAnalyzer:
             else None
         )
 
-    def get_loading_time(self):
+    def get_loading_time(self) -> float:
         if not self._critical_error:
             return self._loading_time / 1000
 
-    def get_status_code(self):
+    def get_status_code(self) -> int:
         if not self._critical_error:
             find_in_response = list(
                 filter(
@@ -72,7 +72,7 @@ class BrowserResponseAnalyzer:
                 "status"
             ]
 
-    def get_remote_ip_port(self):
+    def get_remote_ip_port(self) -> tuple:
         if not self._critical_error:
             find_in_response = list(
                 filter(
@@ -89,7 +89,7 @@ class BrowserResponseAnalyzer:
             ]
             return ip, port
 
-    def get_browser_errors(self):
+    def get_browser_errors(self) -> list:
         result = []
         if not self._critical_error:
             find_in_response = list(
@@ -103,7 +103,7 @@ class BrowserResponseAnalyzer:
             result.append(self._critical_error)
         return result
 
-    def get_requests_statistics(self):
+    def get_requests_statistics(self) -> tuple:
         request_sent_pattern = "\\bNetwork.requestWillBeSent\\b"
         response_recieved_pattern = "\\bNetwork.responseReceived\\b"
         loading_failed_pattern = "\\bNetwork.loadingFailed\\b"
@@ -113,3 +113,16 @@ class BrowserResponseAnalyzer:
         failed = len([*re.finditer(loading_failed_pattern, str(self._response))])
 
         return sent, recieved, failed
+
+
+class CurlResponseAnalyzer:
+    """Analyse curl response."""
+
+    def __init__(self, response: str):
+        self._response = response
+
+    def get_status_code(self) -> int:
+        pattern = r"HTTP/(\d|(\d\.\d))\s(\d+)"
+        result = re.compile(pattern).search(self._response)
+        if result is not None:
+            return int(result[3])
