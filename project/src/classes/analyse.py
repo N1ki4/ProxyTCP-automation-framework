@@ -34,6 +34,7 @@ class BrowserResponseAnalyzer:
     """Analyse browser response."""
 
     _target_method = "Network.responseReceived"
+    _fail_method = "Network.loadingFailed"
     _content_type = ("text/html", "text/plain")
 
     def __init__(self, response: dict):
@@ -92,13 +93,20 @@ class BrowserResponseAnalyzer:
     def get_browser_errors(self) -> list:
         result = []
         if not self._critical_error:
-            find_in_response = list(
+            find_in_performance_logs = list(
+                filter(
+                    lambda x: x["message"]["message"]["method"] == self._fail_method,
+                    self._performance_logs,
+                )
+            )
+            find_in_browser_logs = list(
                 filter(
                     lambda x: x["level"] in ("SEVERE", "WARNING"), self._browser_logs
                 )
             )
+            find_in_response = find_in_performance_logs + find_in_browser_logs
             for entry in find_in_response:
-                result.append(entry["message"])
+                result.append(str(entry["message"]))
         else:
             result.append(self._critical_error)
         return result
