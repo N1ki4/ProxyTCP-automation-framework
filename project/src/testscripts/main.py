@@ -3,32 +3,37 @@
 from pyats import aetest
 
 
-from src.classes.sut import Proxy
 from src.classes.remote_tools import SeleniumGrid
-from src.classes.clients import Chrome
-from src.classes.analyse import BrowserResponseAnalyzer, serializer
+from src.classes.clients import Chrome, Curl
+from src.classes.analyse import (
+    BrowserResponseAnalyzer,
+    CurlResponseAnalyzer,
+    serializer,
+)
 
 
 class CommonSetup(aetest.CommonSetup):
-    pass
+    @aetest.subsection
+    def start_selenium(self, testbed):
+        user_device = testbed.devices["user-1"]
+        grid = SeleniumGrid(user_device)
+        grid.start()
 
 
 class WebPageOpensInChrome(aetest.Testcase):
-    @aetest.setup
-    def start_services(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.proxy_connection = Proxy(self.proxy_device)
-        self.proxy_connection.start()
 
+    parameters = {"host": "https://wiki.archlinux.org/"}
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
         self.user_device = testbed.devices["user-1"]
-        self.grid = SeleniumGrid(self.user_device)
-        self.grid.start()
 
     @aetest.test
-    def load_page(self):
+    def load_page(self, host):
         with Chrome(self.user_device) as chrome:
             chrome.open(
-                host="https://wiki.archlinux.org/",
+                host=host,
                 proxy_host=self.proxy_device,
                 write_pcap=False,
                 timeout=30,
@@ -42,31 +47,24 @@ class WebPageOpensInChrome(aetest.Testcase):
                 f"Invalid response, expected status code 200, got {status_code}!"
             )
 
-    @aetest.cleanup
-    def stop_services(self):
-        self.proxy_connection.stop()
-        self.grid.stop()
-
 
 class RemoteIPBelongsToProxy(aetest.Testcase):
+
+    parameters = {"host": "https://wiki.archlinux.org/"}
+
     @aetest.setup
     def start_services(self, testbed):
         self.proxy_device = testbed.devices["proxy-vm"]
-        self.proxy_connection = Proxy(self.proxy_device)
-        self.proxy_connection.start()
-
         self.user_device = testbed.devices["user-1"]
-        self.grid = SeleniumGrid(self.user_device)
-        self.grid.start()
 
     @aetest.test
-    def get_remote_ip(self):
+    def get_remote_ip(self, host):
         proxy_net_ifs = self.proxy_device.interfaces.names.pop()
         proxy_ip = self.proxy_device.interfaces[proxy_net_ifs].ipv4.ip.compressed
 
         with Chrome(self.user_device) as chrome:
             chrome.open(
-                host="https://wiki.archlinux.org/",
+                host=host,
                 proxy_host=self.proxy_device,
                 write_pcap=False,
                 timeout=30,
@@ -81,14 +79,174 @@ class RemoteIPBelongsToProxy(aetest.Testcase):
                 f"Invalid remote address, expected {proxy_ip}, got {remote_ip}!"
             )
 
-    @aetest.cleanup
-    def stop_services(self):
-        self.proxy_connection.stop()
-        self.grid.stop()
+
+class ProxyDoesNotAlterPorts(aetest.Testcase):
+
+    parameters = {
+        "no_error": ["https://tools.ietf.org", "https://tools.ietf.org:443"],
+        "ssl_error": ["https://tools.ietf.org:80"],
+        "connection_error": [
+            "https://tools.ietf.org:20222",
+            "https://tools.ietf.org:65535",
+        ],
+    }
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+        aetest.loop.mark(self.no_error_test, testdata=self.parameters["no_error"])
+        aetest.loop.mark(self.ssl_error_test, testdata=self.parameters["ssl_error"])
+        aetest.loop.mark(
+            self.con_error_test, testdata=self.parameters["connection_error"]
+        )
+
+    @aetest.test
+    def no_error_test(self, testdata):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=testdata,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+            stats = chrome.get_stats("response.json")
+        serialized_stats = serializer(stats)
+        data = BrowserResponseAnalyzer(serialized_stats)
+        status_code = data.get_status_code()
+        if status_code != 200:
+            self.failed(
+                f"Invalid response, expected status code 200, got {status_code}!"
+            )
+
+    @aetest.test
+    def ssl_error_test(self, testdata):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=testdata,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+            stats = chrome.get_stats("response.json")
+        serialized_stats = serializer(stats)
+        data = BrowserResponseAnalyzer(serialized_stats)
+        errors = data.get_browser_errors()
+        pass_condition = len(errors) == 1 and "ERR_SSL_PROTOCOL_ERROR" in errors[0]
+        if not pass_condition:
+            self.failed("Invalod response, no `ERR_SSL_PROTOCOL_ERROR` occured!")
+
+    @aetest.test
+    def con_error_test(self, testdata):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=testdata,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+            stats = chrome.get_stats("response.json")
+        serialized_stats = serializer(stats)
+        data = BrowserResponseAnalyzer(serialized_stats)
+        errors = data.get_browser_errors()
+        pass_condition = len(errors) == 1 and "ERR_CONNECTION_REFUSED" in errors[0]
+        if not pass_condition:
+            self.failed("Invalod response, no `ERR_CONNECTION_REFUSED` occured!")
+
+
+class InvalidProxyHost(aetest.Testcase):
+
+    parameters = {"host": "https://wiki.archlinux.org/", "proxy_ip": "10.1.1.1"}
+
+    @aetest.setup
+    def start_services(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def connect_invalid_proxy_ip(self, host, proxy_ip):
+        with Curl(self.user_device) as curl:
+            curl.send(
+                host=host,
+                proxy_host=self.proxy_device,
+                proxy_ip=proxy_ip,
+                timeout=10,
+                write_pcap=False,
+            )
+            stats = curl.get_response("curl_pcap_proxy.txt")
+        if "Connection timed out" not in stats:
+            self.failed(f"Expected connection timeout, got {stats}")
+
+
+class InvalidProxyPort(aetest.Testcase):
+
+    parameters = {"host": "https://wiki.archlinux.org/", "proxy_port": "8010"}
+
+    @aetest.setup
+    def start_services(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def connect_invalid_proxy_port(self, host, proxy_port):
+        with Curl(self.user_device) as curl:
+            curl.send(
+                host=host,
+                proxy_host=self.proxy_device,
+                proxy_port=proxy_port,
+                timeout=10,
+                write_pcap=False,
+            )
+            stats = curl.get_response("curl_pcap_proxy.txt")
+        if "Connection timed out" not in stats:
+            self.failed(f"Expected connection timeout, got {stats}")
+
+
+class StatusCodesCorrectTransfer(aetest.Testcase):
+
+    parameters = {
+        "hosts": [
+            "https://httpstat.us/200",
+            "https://httpstat.us/301",
+            "https://httpstat.us/400",
+            "https://httpstat.us/403",
+            "https://httpstat.us/404",
+            "https://httpstat.us/500",
+            "https://httpstat.us/502",
+            "https://httpstat.us/503",
+        ],
+        "codes": [200, 301, 400, 403, 404, 500, 502, 503],
+    }
+
+    @aetest.setup
+    def start_services(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+        aetest.loop.mark(
+            self.test_code, host=self.parameters["hosts"], code=self.parameters["codes"]
+        )
+
+    @aetest.test
+    def test_code(self, host, code):
+        with Curl(self.user_device) as curl:
+            curl.send(
+                host=host, proxy_host=self.proxy_device, timeout=10, write_pcap=False
+            )
+            stats = curl.get_response("curl_pcap_proxy.txt")
+        data = CurlResponseAnalyzer(stats)
+        status_code = data.get_status_code()
+        if status_code != code:
+            self.failed(f"Expected status code {code}, got {status_code}")
 
 
 class CommonCleanup(aetest.CommonCleanup):
-    pass
+    @aetest.subsection
+    def stop_selenium(self, testbed):
+        user_device = testbed.devices["user-1"]
+        grid = SeleniumGrid(user_device)
+        grid.stop()
 
 
 if __name__ == "__main__":

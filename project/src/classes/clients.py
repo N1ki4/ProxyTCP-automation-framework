@@ -11,10 +11,11 @@ from selenium.common import exceptions
 from pyats.topology import Device
 
 from src.classes import utils
+from src.classes.sut import Proxy
 from src.classes.analyse import BrowserStatKeys
 
 _log = logging.getLogger(__name__).setLevel(logging.INFO)
-logging.getLogger("unicon").setLevel(logging.ERROR)
+logging.getLogger("unicon").setLevel(logging.INFO)
 
 
 def get_host_ip(host) -> str:
@@ -44,6 +45,7 @@ class ChromeBase(ABC):
         self._chromeoptions = None
         self._grid = None
         self._proxy_enabled = False
+        self._proxy_connection = None
         self._exceptions = []
 
         # apply options
@@ -76,6 +78,13 @@ class ChromeBase(ABC):
         option = f"--proxy-server=socks5://{proxy_ip}:{proxy_port}"
         self._add_option(option)
         self._proxy_enabled = True
+
+    def _start_proxy(self, proxy_host: Device):
+        self._proxy_connection = Proxy(proxy_host)
+        self._proxy_connection.start()
+
+    def _stop_proxy(self):
+        self._proxy_connection.stop()
 
     def _add_option(self, option: str) -> None:
         self._chromeoptions.add_argument(option)
@@ -144,6 +153,7 @@ class Chrome(ChromeBase):
         """
 
         if proxy_host is not None:
+            self._start_proxy(proxy_host)
             proxy_net_ifs = proxy_host.interfaces.names.pop()
             proxy_ip = proxy_host.interfaces[proxy_net_ifs].ipv4.ip.compressed
             self._set_proxy(proxy_ip, proxy_port)
@@ -159,6 +169,8 @@ class Chrome(ChromeBase):
                 self._get(host, timeout)
         else:
             self._get(host, timeout)
+        if proxy_host is not None:
+            self._stop_proxy()
 
     def make_screenshot(self, name: str) -> None:
         self._driver.save_screenshot(f"{name}.png")
@@ -258,9 +270,9 @@ class ChromeAsync(ChromeBase):
         """
 
         if proxy_host is not None:
+            self._start_proxy(proxy_host)
             proxy_net_ifs = proxy_host.interfaces.names.pop()
             proxy_ip = proxy_host.interfaces[proxy_net_ifs].ipv4.ip.compressed
-            print(proxy_ip, proxy_port)
             self._set_proxy(proxy_ip, proxy_port)
 
         amount_of_drivers = len(hosts)
@@ -274,6 +286,8 @@ class ChromeAsync(ChromeBase):
                 self._async_get(hosts, timeout)
         else:
             self._async_get(hosts, timeout)
+        if proxy_host is not None:
+            self._stop_proxy()
 
     def make_screenshots(self, name: str) -> None:
         for index, driver in enumerate(self._drivers):
@@ -320,6 +334,7 @@ class Curl:
             device (Device): device object, from where curl command will be sent
         """
         self._device = device
+        self._proxy_connection = None
         self._response = None
 
     def _build_command(
@@ -342,11 +357,19 @@ class Curl:
     def _execute_command(self, command):
         self._response = self._device.curl.execute(command)
 
+    def _start_proxy(self, proxy_host: Device):
+        self._proxy_connection = Proxy(proxy_host)
+        self._proxy_connection.start()
+
+    def _stop_proxy(self):
+        self._proxy_connection.stop()
+
     def send(
         self,
         host: str,
         timeout: int = None,
         proxy_host: Device = None,
+        proxy_ip: str = None,
         proxy_port: str = None,
         write_pcap: bool = True,
     ) -> None:
@@ -356,14 +379,19 @@ class Curl:
             host (str): destination web resource url
             timeout (int): request timeout
             proxy_host (Device): device with proxy server installed
+            proxy_ip (str): ip of the proxy host, usually not specified
             proxy_port (str): tcp port of the proxy host, 1080 is default for socks5
             write_pcap (bool): capture traffic with tshark and write to file
         """
 
-        proxy_ip = None
         if proxy_host is not None:
+            self._start_proxy(proxy_host)
             proxy_net_ifs = proxy_host.interfaces.names.pop()
-            proxy_ip = proxy_host.interfaces[proxy_net_ifs].ipv4.ip.compressed
+            proxy_ip = (
+                proxy_host.interfaces[proxy_net_ifs].ipv4.ip.compressed
+                if not proxy_ip
+                else proxy_ip
+            )
 
         curl_command = self._build_command(host, timeout, proxy_ip, proxy_port)
 
@@ -376,6 +404,8 @@ class Curl:
                 self._execute_command(curl_command)
         else:
             self._execute_command(curl_command)
+        if proxy_host is not None:
+            self._stop_proxy()
 
     def get_response(self, file: str = None) -> str:
         if isinstance(file, str):
@@ -406,10 +436,11 @@ class Curl:
 # # single chrome no proxy no pcap
 # with Chrome(device) as chrome:
 #     chrome.open(
-#         host='https://receipt1.seiko-cybertime.jp',
+#         host='https://tools.ietf.org:65535',
+#         proxy_host=proxy,
 #         write_pcap=False,
 #     )
-#     chrome.get_stats('singlechrome_nopcap_noproxy.json')
+#     chrome.get_stats('A_proxy_port_65535.json')
 
 #     # # single chrome no proxy pcap
 #     # with Chrome(device) as chrome:

@@ -126,3 +126,25 @@ class CurlResponseAnalyzer:
         result = re.compile(pattern).search(self._response)
         if result is not None:
             return int(result[3])
+
+
+if __name__ == "__main__":
+    files = {
+        "noproxy": "A_no_proxy_no_port.json",
+        "noproxy_80": "A_no_proxy_port_80.json",
+        "noproxy_443": "A_no_proxy_port_443.json",
+        "noproxy_20222": "A_no_proxy_port_20222.json",
+        "noproxy_65535": "A_no_proxy_port_65535.json",
+        "proxy": "A_proxy_no_port.json",
+        "proxy_80": "A_proxy_port_80.json",
+        "proxy_443": "A_proxy_port_443.json",
+        "proxy_20222": "A_proxy_port_20222.json",
+        "proxy_65535": "A_proxy_port_65535.json",
+    }
+    results = {}
+    for k, v in files.items():
+        with open(v) as f:
+            opened_v = json.loads(f.read())
+        serialized_v = serializer(opened_v)
+        analyzed_v = BrowserResponseAnalyzer(serialized_v)
+        results.update({k: analyzed_v})
