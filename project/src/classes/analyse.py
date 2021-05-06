@@ -102,53 +102,14 @@ class BrowserResponseAnalyzer:
         else:
             result.append(self._critical_error)
         return result
-
+    
     def get_requests_statistics(self) -> tuple:
         request_sent_pattern = "\\bNetwork.requestWillBeSent\\b"
+        return len([*re.finditer(request_sent_pattern, str(self._response))])
+    
+    def get_response_statistics(self) -> tuple:
         response_recieved_pattern = "\\bNetwork.responseReceived\\b"
-        loading_failed_pattern = "\\bNetwork.loadingFailed\\b"
-
-        sent = len([*re.finditer(request_sent_pattern, str(self._response))])
-        recieved = len([*re.finditer(response_recieved_pattern, str(self._response))])
-        failed = len([*re.finditer(loading_failed_pattern, str(self._response))])
-
-        return sent, recieved, failed
-
-    @staticmethod
-    def count_average(stats) -> bool:
-        requests_with_proxy = list(
-            (request["requestWillBeSent"]) for request in stats[: int(len(stats) / 2)]
-        )
-        requests_without_proxy = list(
-            (request["requestWillBeSent"]) for request in stats[int(len(stats) / 2) :]
-        )
-        average_request_with_proxy = sum(requests_with_proxy) / len(requests_with_proxy)
-        average_request_without_proxy = sum(requests_without_proxy) / len(
-            requests_without_proxy
-        )
-
-        responses_with_proxy = list(
-            (response["responseReceived"]) for response in stats[: int(len(stats) / 2)]
-        )
-        responses_without_proxy = list(
-            (response["responseReceived"]) for response in stats[int(len(stats) / 2) :]
-        )
-        average_response_with_proxy = sum(responses_with_proxy) / len(
-            responses_with_proxy
-        )
-        average_response_without_proxy = sum(responses_without_proxy) / len(
-            responses_without_proxy
-        )
-
-        requests_percent = (
-            100 * average_request_without_proxy / average_request_with_proxy
-        )
-        response_percent = (
-            100 * average_response_without_proxy / average_response_with_proxy
-        )
-        if int(round(requests_percent)) > 95 and int(round(response_percent)) > 95:
-            return True
-        return False
+        return len([*re.finditer(response_recieved_pattern, str(self._response))])
 
 
 class CurlResponseAnalyzer:
