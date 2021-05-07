@@ -15,7 +15,7 @@ from src.classes.analyse import (
 class CommonSetup(aetest.CommonSetup):
     @aetest.subsection
     def start_selenium(self, testbed):
-        user_device = testbed.devices["user-2"]
+        user_device = testbed.devices["user-1"]
         grid = SeleniumGrid(user_device)
         grid.start()
 
