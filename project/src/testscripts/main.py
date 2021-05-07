@@ -15,7 +15,7 @@ from src.classes.analyse import (
 class CommonSetup(aetest.CommonSetup):
     @aetest.subsection
     def start_selenium(self, testbed):
-        user_device = testbed.devices["user-1"]
+        user_device = testbed.devices["user-2"]
         grid = SeleniumGrid(user_device)
         grid.start()
 
@@ -239,6 +239,349 @@ class StatusCodesCorrectTransfer(aetest.Testcase):
         status_code = data.get_status_code()
         if status_code != code:
             self.failed(f"Expected status code {code}, got {status_code}")
+
+
+class HTTPNotSupported(aetest.Testcase):
+
+    parameters = {"host": "http://lutasprava.com"}
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def connect_http(self, host):
+        with Curl(self.user_device) as curl:
+            curl.send(
+                host=host,
+                proxy_host=self.proxy_device,
+                timeout=10,
+                write_pcap=False,
+            )
+            stats = curl.get_response("curl_pcap_proxy.txt")
+        if "Connection timed out" not in stats:
+            self.failed(f"Expected connection timeout, got {stats}")
+
+
+class FTPNotSupported(aetest.Testcase):
+
+    parameters = {"host": "ftp://speedtest.tele2.net/"}
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def connect_ftp(self, host):
+        with Curl(self.user_device) as curl:
+            curl.send(
+                host=host,
+                proxy_host=self.proxy_device,
+                timeout=10,
+                write_pcap=False,
+            )
+            stats = curl.get_response("curl_pcap_proxy.txt")
+        if "Connection timed out" not in stats:
+            self.failed(f"Expected connection timeout, got {stats}")
+
+
+class IncorrectProxyProtocol(aetest.Testcase):
+
+    parameters = {"host": "https://wiki.archlinux.org/ ", "protocol": "socks4"}
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def incorrect_protocol_test(self, host, protocol):
+        with Curl(self.user_device) as curl:
+            curl.send(
+                host=host,
+                proxy_host=self.proxy_device,
+                proxy_protocol=protocol,
+                timeout=10,
+                write_pcap=False,
+            )
+            stats = curl.get_response("curl_pcap_proxy.txt")
+        if "Connection timed out" not in stats:
+            self.failed(f"Expected connection timeout, got {stats}")
+
+
+class BrockenCerts(aetest.Testcase):
+
+    parameters = {"host": "https://www.grupoemsa.org/"}
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def brocken_certs_test(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+            stats = chrome.get_stats("response.json")
+        serialized_stats = serializer(stats)
+        data = BrowserResponseAnalyzer(serialized_stats)
+        errors = data.get_browser_errors()
+        pass_condition = len(errors) >= 1 and "ERR_CERT_AUTHORITY_INVALID" in errors[0]
+        if not pass_condition:
+            self.failed("Invalod response, no `ERR_CERT_AUTHORITY_INVALID` occured!")
+
+
+class ObsoleteTLS(aetest.Testcase):
+
+    parameters = {"host": "https://receipt1.seiko-cybertime.jp"}
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def obsolete_tls_test(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+            stats = chrome.get_stats("response.json")
+        serialized_stats = serializer(stats)
+        data = BrowserResponseAnalyzer(serialized_stats)
+        errors = data.get_browser_errors()
+        print(errors)
+        expected_message = (
+            f"The connection used to load resources from {host}"
+            " used TLS 1.0 or TLS 1.1, which are deprecated and will be disabled"
+            " in the future."
+        )
+        pass_condition = False
+        if errors:
+            for error in errors:
+                if expected_message in error:
+                    pass_condition = True
+        if not pass_condition:
+            self.failed("Invalod response, no `ERR_SSL_OBSOLETE_VERSION` occured!")
+
+
+class HostSupportCloudFlare(aetest.Testcase):
+
+    parameters = {
+        "hosts": [
+            "https://unpkg.com/",
+            "https://www.allaboutcookies.org/",
+            "https://forums.wxwidgets.org/",
+        ]
+    }
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+        aetest.loop.mark(self.cloud_flare_test, host=self.parameters["hosts"])
+
+    @aetest.test
+    def cloud_flare_test(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+            stats = chrome.get_stats("response.json")
+        serialized_stats = serializer(stats)
+        data = BrowserResponseAnalyzer(serialized_stats)
+        status_code = data.get_status_code()
+        if status_code != 200:
+            self.failed(
+                f"Invalid response, expected status code 200, got {status_code}!"
+            )
+
+
+class HostSupportApache(aetest.Testcase):
+
+    parameters = {
+        "hosts": [
+            "https://tools.ietf.org/html/rfc1928",
+            "https://w3techs.com/technologies/details/ws-apache",
+            "https://dev.mysql.com/doc/refman/8.0/en/",
+        ]
+    }
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+        aetest.loop.mark(self.apache_test, host=self.parameters["hosts"])
+
+    @aetest.test
+    def apache_test(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+            stats = chrome.get_stats("response.json")
+        serialized_stats = serializer(stats)
+        data = BrowserResponseAnalyzer(serialized_stats)
+        status_code = data.get_status_code()
+        if status_code != 200:
+            self.failed(
+                f"Invalid response, expected status code 200, got {status_code}!"
+            )
+
+
+class HostSupportNginx(aetest.Testcase):
+
+    parameters = {
+        "hosts": [
+            "https://pypi.org/project/pyats/",
+            "https://wiki.archlinux.org/",
+            "https://glossary.istqb.org/app/en/search/",
+        ]
+    }
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+        aetest.loop.mark(self.nginx_test, host=self.parameters["hosts"])
+
+    @aetest.test
+    def nginx_test(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+            stats = chrome.get_stats("response.json")
+        serialized_stats = serializer(stats)
+        data = BrowserResponseAnalyzer(serialized_stats)
+        status_code = data.get_status_code()
+        if status_code != 200:
+            self.failed(
+                f"Invalid response, expected status code 200, got {status_code}!"
+            )
+
+
+class HostSupportMicrosoftIIS(aetest.Testcase):
+
+    parameters = {
+        "hosts": [
+            "https://www.skype.com/en/about/",
+            "https://stackexchange.com/",
+            "https://stackoverflow.com/questions/9436534/ajax-tutorial-for-post-and-get",
+        ]
+    }
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+        aetest.loop.mark(self.microsoft_iis_test, host=self.parameters["hosts"])
+
+    @aetest.test
+    def microsoft_iis_test(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+            stats = chrome.get_stats("response.json")
+        serialized_stats = serializer(stats)
+        data = BrowserResponseAnalyzer(serialized_stats)
+        status_code = data.get_status_code()
+        if status_code != 200:
+            self.failed(
+                f"Invalid response, expected status code 200, got {status_code}!"
+            )
+
+
+class HostSupportGWS(aetest.Testcase):
+
+    parameters = {"hosts": ["https://www.google.com/", "https://golang.google.cn/"]}
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+        aetest.loop.mark(self.gws_test, host=self.parameters["hosts"])
+
+    @aetest.test
+    def gws_test(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+            stats = chrome.get_stats("response.json")
+        serialized_stats = serializer(stats)
+        data = BrowserResponseAnalyzer(serialized_stats)
+        status_code = data.get_status_code()
+        if status_code != 200:
+            self.failed(
+                f"Invalid response, expected status code 200, got {status_code}!"
+            )
+
+
+class HostSupportAmazon(aetest.Testcase):
+
+    parameters = {
+        "hosts": [
+            "https://developer.mozilla.org/uk/docs/Learn/Server-side/Django",
+            "https://docs.docker.com/",
+        ]
+    }
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+        aetest.loop.mark(self.amazon_test, host=self.parameters["hosts"])
+
+    @aetest.test
+    def amazon_test(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+            stats = chrome.get_stats("response.json")
+        serialized_stats = serializer(stats)
+        data = BrowserResponseAnalyzer(serialized_stats)
+        status_code = data.get_status_code()
+        if status_code != 200:
+            self.failed(
+                f"Invalid response, expected status code 200, got {status_code}!"
+            )
 
 
 class CommonCleanup(aetest.CommonCleanup):

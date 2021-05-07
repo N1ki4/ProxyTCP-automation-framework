@@ -67,15 +67,19 @@ class ChromeBase(ABC):
         grid = f"http://{host}:4444/wd/hub"
         self._grid = grid
 
-    def _set_proxy(self, proxy_ip: str, proxy_port: str = None) -> None:
+    def _set_proxy(
+        self, proxy_ip: str, proxy_port: str = None, proxy_protocol: str = None
+    ) -> None:
         """Set proxy servere parameters.
 
         Args:
             proxy_ip (str): ip address of the proxy host
             proxy_port (str): tcp port of the proxy host, 1080 is default for socks5
+            proxy_protocol (str): proxy protocol, default socks5
         """
+        proxy_protocol = "socks5" if proxy_protocol is None else proxy_protocol
         proxy_port = "1080" if proxy_port is None else proxy_port
-        option = f"--proxy-server=socks5://{proxy_ip}:{proxy_port}"
+        option = f"--proxy-server={proxy_protocol}://{proxy_ip}:{proxy_port}"
         self._add_option(option)
         self._proxy_enabled = True
 
@@ -140,6 +144,7 @@ class Chrome(ChromeBase):
         timeout: int = None,
         proxy_host: Device = None,
         proxy_port: str = None,
+        proxy_protocol: str = None,
         write_pcap: bool = True,
     ) -> None:
         """Main execution method.
@@ -149,6 +154,7 @@ class Chrome(ChromeBase):
             timeout (int): request timeout
             proxy_host (Device): device with proxy server installed
             proxy_port (str): tcp port of the proxy host, 1080 is default for socks5
+            proxy_protocol (str): proxy protocol, default socks5
             write_pcap (bool): capture traffic with tshark and write to file
         """
 
@@ -156,7 +162,7 @@ class Chrome(ChromeBase):
             self._start_proxy(proxy_host)
             proxy_net_ifs = proxy_host.interfaces.names.pop()
             proxy_ip = proxy_host.interfaces[proxy_net_ifs].ipv4.ip.compressed
-            self._set_proxy(proxy_ip, proxy_port)
+            self._set_proxy(proxy_ip, proxy_port, proxy_protocol)
 
         self._init_driver()
 
@@ -343,13 +349,19 @@ class Curl:
         timeout: int = None,
         proxy_ip: str = None,
         proxy_port: str = None,
+        proxy_protocol: str = None,
     ):
+        proxy_protocol = (
+            "--socks5-hostname "
+            if proxy_protocol is None
+            else f"--proxy {proxy_protocol}://"
+        )
+        proxy_port = "1080" if proxy_port is None else proxy_port
+
         base_command = f"curl -I {host}"
         command = base_command
         if proxy_ip is not None:
-            command += (
-                f" --socks5-hostname {proxy_ip}:{proxy_port if proxy_port else '1080'}"
-            )
+            command += f" {proxy_protocol}{proxy_ip}:{proxy_port}"
         if timeout is not None:
             command += f" --connect-timeout {timeout}"
         return command
@@ -371,6 +383,7 @@ class Curl:
         proxy_host: Device = None,
         proxy_ip: str = None,
         proxy_port: str = None,
+        proxy_protocol: str = None,
         write_pcap: bool = True,
     ) -> None:
         """Execute curl command on the device.
@@ -380,7 +393,8 @@ class Curl:
             timeout (int): request timeout
             proxy_host (Device): device with proxy server installed
             proxy_ip (str): ip of the proxy host, usually not specified
-            proxy_port (str): tcp port of the proxy host, 1080 is default for socks5
+            proxy_port (str): tcp port of the proxy host, 1080 is default
+            proxy_protocol (str): proxy protocol, default socks5
             write_pcap (bool): capture traffic with tshark and write to file
         """
 
@@ -393,7 +407,9 @@ class Curl:
                 else proxy_ip
             )
 
-        curl_command = self._build_command(host, timeout, proxy_ip, proxy_port)
+        curl_command = self._build_command(
+            host, timeout, proxy_ip, proxy_port, proxy_protocol
+        )
 
         if write_pcap is True:
             with utils.TrafficCaptureConnection(
