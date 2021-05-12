@@ -5,7 +5,14 @@ import pyshark
 class TsharkPcap(pyshark.FileCapture):
     """Custom class extends FileCapture class from pyshark library."""
 
-    _tls_handshake_tmplate = None
+    _tls1_2_handshake_tmplate = (
+        "Client Hello",
+        "Server Hello",
+        "Server Key Exchange",
+        "Client Key Exchange",
+        "Application Data",
+    )
+    _tls1_3_handshake_tmplate = ("Client Hello", "Server Hello", "Application Data")
     _socks_handshake_template = {
         "connect to server request": {
             "payload": "05:01:00",
@@ -47,10 +54,11 @@ class TsharkPcap(pyshark.FileCapture):
         tls_packets = []
         for packet in self:
             try:
-                if packet.tls:
-                    tls_packets.append(packet.tls._all_fields["tls.record"])
+                packet.ssl
+                tls_packets.append(packet.ssl)
             except AttributeError:
-                continue
+                pass
+
         return tls_packets
 
     @property
@@ -68,12 +76,50 @@ class TsharkPcap(pyshark.FileCapture):
     def find_packets_in_stream(self, packet_type: str):
         """Creates list with lists of packets grouped by tcp stream."""
 
-        if packet_type.lower() == "tls":
+        # find tls1.2 handshake packets
+        if packet_type.lower() == "tls1.2" or "tls1.3":
+            template = (
+                self._tls1_2_handshake_tmplate
+                if packet_type.lower() == "tls1.2"
+                else self._tls1_3_handshake_tmplate
+            )
+            pass_condition = False
+            content = {}
+
+            # look for tls handshake in each tcp stream
             for stream_index in self.tcp_streams:
                 self._display_filter = f"tcp.stream == {stream_index}"
-                if self._tls_handshake_tmplate.issubset(set(self.tls_data)):
-                    return "Packets in stream were found."
-            return "No selected packets were found."
+                packet_found = []
+
+                for message in template:
+                    found = list(
+                        filter(
+                            lambda x: x._all_fields.get("ssl.record") is not None
+                            and message in x._all_fields.get("ssl.record"),
+                            self.tls_data,
+                        )
+                    )
+                    if len(found) >= 1:
+                        packet_found.append(found[0])
+
+                # if all handshake entries were found in a single stream, terminate cycle and
+                # return results
+                if packet_type.lower() == "tls1.2" and len(packet_found) == 5:
+                    pass_condition = True
+                    content = {
+                        "stream index": stream_index,
+                        "handshake": [i.record for i in packet_found],
+                    }
+                    break
+
+                if packet_type.lower() == "tls1.3" and len(packet_found) == 3:
+                    pass_condition = True
+                    content = {
+                        "stream index": stream_index,
+                        "handshake": [i.record for i in packet_found],
+                    }
+                    break
+            return pass_condition, content
 
         # find socks handshake packets
         if packet_type.lower() == "socks":
@@ -116,8 +162,3 @@ class TsharkPcap(pyshark.FileCapture):
                     }
                     break
             return pass_condition, content
-
-
-if __name__ == "__main__":
-    cap = TsharkPcap("/pyats/project/src/temp/user-2_tshark.pcap")
-    res = cap.find_packets_in_stream(packet_type="socks")
