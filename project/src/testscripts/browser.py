@@ -229,15 +229,19 @@ class HostSupportAmazon(aetest.Testcase):
 
 
 class WebsiteResourcesLoading(aetest.Testcase):
-
-    parameters = {"host": "https://docs.docker.com/"}
-
     @aetest.setup
     def setup(self, testbed):
         self.proxy_device = testbed.devices["proxy-vm"]
         self.user_device = testbed.devices["user-1"]
 
-    @aetest.test
+    @aetest.test.loop(
+        uids=["light_web_page", "medium_web_page", "heavy_web_page"],
+        host=[
+            "https://pypi.org/project/pyats/",
+            "https://docs.docker.com/",
+            "https://www.skype.com/",
+        ],
+    )
     def count_page_resources(self, host):
         req_run_result = []
         resp_run_result = []
@@ -299,6 +303,70 @@ class WebsiteResourcesLoading(aetest.Testcase):
 
         if int(round(req_percent)) < 95 and int(round(resp_percent)) < 95:
             self.failed("Too many resources were lost with proxy enabled")
+
+
+class SuperLightWebpageResourceLoading(aetest.Testcase):
+
+    parameters = {"host": "https://wiki.archlinux.org"}
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test.loop(
+        uids=[
+            "first_run",
+            "second_run",
+            "third_run",
+            "fourth_run",
+            "fifth_run",
+            "sixth_run",
+            "seventh_run",
+            "eighth_run",
+            "ninth_run",
+            "tenth_run",
+        ]
+    )
+    def compare_page_resources(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                write_pcap=False,
+                timeout=30,
+            )
+
+            stats = chrome.get_stats()
+            serialized_stats = serializer(stats)
+            data = BrowserResponseAnalyzer(serialized_stats)
+            requests = BrowserResponseAnalyzer.get_requests_statistics(data)
+            responses = BrowserResponseAnalyzer.get_response_statistics(data)
+            failed = BrowserResponseAnalyzer.get_loading_failed_statistics(data)
+
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                write_pcap=False,
+                timeout=30,
+            )
+
+            stats = chrome.get_stats()
+            serialized_stats = serializer(stats)
+            data = BrowserResponseAnalyzer(serialized_stats)
+            proxy_requests = BrowserResponseAnalyzer.get_requests_statistics(data)
+            proxy_responses = BrowserResponseAnalyzer.get_response_statistics(data)
+            proxy_failed = BrowserResponseAnalyzer.get_loading_failed_statistics(data)
+
+            if not (
+                (requests, responses, failed)
+                == (proxy_requests, proxy_responses, proxy_failed)
+                or (requests, responses + 1, failed)
+                == (proxy_requests, proxy_responses, proxy_failed)
+                or (requests, responses, failed)
+                == (proxy_requests, proxy_responses + 1, proxy_failed)
+            ):
+                self.failed("Too many resources were lost!")
 
 
 class CommonCleanup(aetest.CommonCleanup):

@@ -111,13 +111,17 @@ class BrowserResponseAnalyzer:
             result.append(self._critical_error)
         return result
 
-    def get_requests_statistics(self) -> tuple:
+    def get_requests_statistics(self) -> int:
         request_sent_pattern = "\\bNetwork.requestWillBeSent\\b"
         return len([*re.finditer(request_sent_pattern, str(self._response))])
 
-    def get_response_statistics(self) -> tuple:
-        response_recieved_pattern = "\\bNetwork.responseReceived\\b"
-        return len([*re.finditer(response_recieved_pattern, str(self._response))])
+    def get_response_statistics(self) -> int:
+        response_received_pattern = "\\bNetwork.responseReceived\\b"
+        return len([*re.finditer(response_received_pattern, str(self._response))])
+
+    def get_loading_failed_statistics(self) -> int:
+        response_received_pattern = '\\bNetwork.loadingFailed\\b'
+        return len([*re.finditer(response_received_pattern, str(self._response))])
 
 
 class CurlResponseAnalyzer:
