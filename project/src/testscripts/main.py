@@ -20,7 +20,7 @@ from src.classes.analyse import (
 class CommonSetup(aetest.CommonSetup):
     @aetest.subsection
     def start_selenium(self, testbed):
-        user_device = testbed.devices["user-2"]
+        user_device = testbed.devices["user-1"]
         grid = SeleniumGrid(user_device)
         grid.start()
 
@@ -613,6 +613,79 @@ class HostSupportAmazon(aetest.Testcase):
             self.failed(
                 f"Invalid response, expected status code 200, got {status_code}!"
             )
+
+
+class WebsiteResourcesLoading(aetest.Testcase):
+
+    parameters = {"host": "https://docs.docker.com/"}
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def count_page_resources(self, host):
+        req_run_result = []
+        resp_run_result = []
+        for _ in range(1, 6):
+            with Chrome(self.user_device) as chrome:
+                chrome.open(
+                    host=host,
+                    write_pcap=False,
+                    timeout=30,
+                )
+                stats = chrome.get_stats()
+                serialized_stats = serializer(stats)
+                data = BrowserResponseAnalyzer(serialized_stats)
+                req_run_result.append(
+                    BrowserResponseAnalyzer.get_requests_statistics(data)
+                )
+                resp_run_result.append(
+                    BrowserResponseAnalyzer.get_response_statistics(data)
+                )
+
+        for _ in range(1, 6):
+            with Chrome(self.user_device) as chrome:
+                chrome.open(
+                    host=host,
+                    proxy_host=self.proxy_device,
+                    write_pcap=False,
+                    timeout=30,
+                )
+                stats = chrome.get_stats()
+                serialized_stats = serializer(stats)
+                data = BrowserResponseAnalyzer(serialized_stats)
+                req_run_result.append(
+                    BrowserResponseAnalyzer.get_requests_statistics(data)
+                )
+                resp_run_result.append(
+                    BrowserResponseAnalyzer.get_response_statistics(data)
+                )
+        disabled_proxy_requests_slice = req_run_result[: int(len(req_run_result) / 2)]
+        enable_proxy_requests_slice = req_run_result[int(len(req_run_result) / 2) :]
+
+        disabled_proxy_response_slice = resp_run_result[: int(len(resp_run_result) / 2)]
+        enable_proxy_response_slice = resp_run_result[int(len(resp_run_result) / 2) :]
+
+        avg_disabled_proxy_request = sum(disabled_proxy_requests_slice) / len(
+            disabled_proxy_requests_slice
+        )
+        avg_enable_proxy_request = sum(enable_proxy_requests_slice) / len(
+            enable_proxy_requests_slice
+        )
+        req_percent = (avg_enable_proxy_request * 100) / avg_disabled_proxy_request
+
+        avg_no_proxy_resp = sum(disabled_proxy_response_slice) / len(
+            disabled_proxy_response_slice
+        )
+        avg_enable_proxy_resp = sum(enable_proxy_response_slice) / len(
+            enable_proxy_response_slice
+        )
+        resp_percent = (100 * avg_enable_proxy_resp) / avg_no_proxy_resp
+
+        if int(round(req_percent)) < 95 and int(round(resp_percent)) < 95:
+            self.failed("Too many resources were lost with proxy enabled")
 
 
 class CommonCleanup(aetest.CommonCleanup):
