@@ -369,10 +369,242 @@ class SuperLightWebpageResourceLoading(aetest.Testcase):
                 self.failed("Too many resources were lost!")
 
 
+class LoadingTimeSuperLight(aetest.Testcase):
+
+    parameters = {
+        "host": "https://wiki.archlinux.org/",
+        "delay_rate": 2,
+        "runs": 10,
+        "fails": 2,
+    }
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def loading_time_test(self, steps, host, delay_rate, runs, fails):
+        time_proxy_off = []
+        with steps.start("Collecting statistics with proxy off"):
+            for _ in range(runs):
+                with Chrome(self.user_device) as chrome:
+                    chrome.open(
+                        host=host,
+                        timeout=30,
+                        write_pcap=False,
+                    )
+                    stats = chrome._get_page_loading_time()
+                    print(stats)
+                    time_proxy_off.append(stats)
+
+        time_proxy_on = []
+        with steps.start("Collecting statistics with proxy on"):
+            for _ in range(runs):
+                with Chrome(self.user_device) as chrome:
+                    chrome.open(
+                        host=host,
+                        proxy_host=self.proxy_device,
+                        timeout=30,
+                        write_pcap=False,
+                    )
+                    stats = chrome._get_page_loading_time()
+                    print(stats)
+                    time_proxy_on.append(stats)
+
+        with steps.start("Comparing results"):
+            overtime_entries = list(
+                filter(
+                    lambda r: r > delay_rate,
+                    map(lambda x, y: y / x, time_proxy_off, time_proxy_on),
+                )
+            )
+            if len(overtime_entries) > fails:
+                self.failed(
+                    f"{len(overtime_entries)} out of {runs} times page loading"
+                    " time with proxy on exceeded normal loading time for more than"
+                    f" {delay_rate} times"
+                )
+
+
+class LoadingTimeLight(aetest.Testcase):
+
+    parameters = {
+        "host": "https://docs.docker.com/",
+        "delay_rate": 2,
+        "runs": 10,
+        "fails": 2,
+    }
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def loading_time_test(self, steps, host, delay_rate, runs, fails):
+        time_proxy_off = []
+        with steps.start("Collecting statistics with proxy off"):
+            for _ in range(runs):
+                with Chrome(self.user_device) as chrome:
+                    chrome.open(
+                        host=host,
+                        timeout=30,
+                        write_pcap=False,
+                    )
+                    stats = chrome._get_page_loading_time()
+                    print(stats)
+                    time_proxy_off.append(stats)
+
+        time_proxy_on = []
+        with steps.start("Collecting statistics with proxy on"):
+            for _ in range(runs):
+                with Chrome(self.user_device) as chrome:
+                    chrome.open(
+                        host=host,
+                        proxy_host=self.proxy_device,
+                        timeout=30,
+                        write_pcap=False,
+                    )
+                    stats = chrome._get_page_loading_time()
+                    print(stats)
+                    time_proxy_on.append(stats)
+
+        with steps.start("Comparing results"):
+            overtime_entries = list(
+                filter(
+                    lambda r: r > delay_rate,
+                    map(lambda x, y: y / x, time_proxy_off, time_proxy_on),
+                )
+            )
+            if len(overtime_entries) > fails:
+                self.failed(
+                    f"{len(overtime_entries)} out of {runs} times page loading"
+                    " time with proxy on exceeded normal loading time for more than"
+                    f" {delay_rate} times"
+                )
+
+
+class LoadingTimeMedium(aetest.Testcase):
+
+    parameters = {
+        "host": "https://glossary.istqb.org/app/en/search/",
+        "delay_rate": 2,
+        "runs": 10,
+        "fails": 2,
+    }
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def loading_time_test(self, steps, host, delay_rate, runs, fails):
+        time_proxy_off = []
+        with steps.start("Collecting statistics with proxy off"):
+            for _ in range(runs):
+                with Chrome(self.user_device) as chrome:
+                    chrome.open(
+                        host=host,
+                        timeout=30,
+                        write_pcap=False,
+                    )
+                    stats = chrome._get_page_loading_time()
+                    print(stats)
+                    time_proxy_off.append(stats)
+
+        time_proxy_on = []
+        with steps.start("Collecting statistics with proxy on"):
+            for _ in range(runs):
+                with Chrome(self.user_device) as chrome:
+                    chrome.open(
+                        host=host,
+                        proxy_host=self.proxy_device,
+                        timeout=30,
+                        write_pcap=False,
+                    )
+                    stats = chrome._get_page_loading_time()
+                    print(stats)
+                    time_proxy_on.append(stats)
+
+        with steps.start("Comparing results"):
+            overtime_entries = list(
+                filter(
+                    lambda r: r > delay_rate,
+                    map(lambda x, y: y / x, time_proxy_off, time_proxy_on),
+                )
+            )
+            if len(overtime_entries) > fails:
+                self.failed(
+                    f"{len(overtime_entries)} out of {runs} times page loading"
+                    " time with proxy on exceeded normal loading time for more than"
+                    f" {delay_rate} times"
+                )
+
+
+class LoadingTimeHeavy(aetest.Testcase):
+
+    parameters = {
+        "host": "https://www.skype.com",
+        "delay_rate": 2,
+        "runs": 10,
+        "fails": 2,
+    }
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def loading_time_test(self, steps, host, delay_rate, runs, fails):
+        time_proxy_off = []
+        with steps.start("Collecting statistics with proxy off"):
+            for _ in range(runs):
+                with Chrome(self.user_device) as chrome:
+                    chrome.open(
+                        host=host,
+                        timeout=30,
+                        write_pcap=False,
+                    )
+                    stats = chrome._get_page_loading_time()
+                    print(stats)
+                    time_proxy_off.append(stats)
+
+        time_proxy_on = []
+        with steps.start("Collecting statistics with proxy on"):
+            for _ in range(runs):
+                with Chrome(self.user_device) as chrome:
+                    chrome.open(
+                        host=host,
+                        proxy_host=self.proxy_device,
+                        timeout=30,
+                        write_pcap=False,
+                    )
+                    stats = chrome._get_page_loading_time()
+                    print(stats)
+                    time_proxy_on.append(stats)
+
+        with steps.start("Comparing results"):
+            overtime_entries = list(
+                filter(
+                    lambda r: r > delay_rate,
+                    map(lambda x, y: y / x, time_proxy_off, time_proxy_on),
+                )
+            )
+            if len(overtime_entries) > fails:
+                self.failed(
+                    f"{len(overtime_entries)} out of {runs} times page loading"
+                    " time with proxy on exceeded normal loading time for more than"
+                    f" {delay_rate} times"
+                )
+
+
 class CommonCleanup(aetest.CommonCleanup):
     @aetest.subsection
     def stop_selenium(self, testbed):
-        user_device = testbed.devices["user-2"]
+        user_device = testbed.devices["user-1"]
         grid = SeleniumGrid(user_device)
         grid.stop()
 
@@ -385,7 +617,7 @@ if __name__ == "__main__":
     from pyats import topology
 
     logging.getLogger(__name__).setLevel(logging.DEBUG)
-    logging.getLogger("unicon").setLevel(logging.INFO)
+    logging.getLogger("unicon").setLevel(logging.ERROR)
 
     parser = argparse.ArgumentParser(description="standalone parser")
     parser.add_argument("--testbed", dest="testbed", type=topology.loader.load)
