@@ -120,7 +120,7 @@ class BrowserResponseAnalyzer:
         return len([*re.finditer(response_received_pattern, str(self._response))])
 
     def get_loading_failed_statistics(self) -> int:
-        response_received_pattern = '\\bNetwork.loadingFailed\\b'
+        response_received_pattern = "\\bNetwork.loadingFailed\\b"
         return len([*re.finditer(response_received_pattern, str(self._response))])
 
 
