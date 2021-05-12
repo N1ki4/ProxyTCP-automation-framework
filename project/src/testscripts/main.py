@@ -215,7 +215,7 @@ class SocksHandshakeSuccess(aetest.Testcase):
     @aetest.setup
     def start_services(self, testbed):
         self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-2"]
+        self.user_device = testbed.devices["user-1"]
 
     @aetest.test
     def test_socks_handshake(self, host):

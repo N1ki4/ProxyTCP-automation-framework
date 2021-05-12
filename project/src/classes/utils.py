@@ -144,11 +144,11 @@ class TrafficCaptureConnection:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         # disconnect from devices and copy pcap files
-        self._user_tshark.stop()
-        self._user.tshark.disconnect()
-        self._user_fileutils.copy_from_device(source=self._user_tshark._capfile)
-
         if self._proxy:
             self._proxy_tshark.stop()
             self._proxy.tshark.disconnect()
             self._proxy_fileutils.copy_from_device(source=self._proxy_tshark._capfile)
+
+        self._user_tshark.stop()
+        self._user.tshark.disconnect()
+        self._user_fileutils.copy_from_device(source=self._user_tshark._capfile)
