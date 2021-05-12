@@ -1,10 +1,15 @@
 # pylint: disable=no-self-use # pyATS-related exclusion
 # pylint: disable=attribute-defined-outside-init # pyATS-related exclusion
+import os
+
+
 from pyats import aetest
 
 
 from src.classes.remote_tools import SeleniumGrid
 from src.classes.clients import Chrome, Curl
+from src.classes.tshark_pcap import TsharkPcap
+from src.classes.utils import _temp_files_dir
 from src.classes.analyse import (
     BrowserResponseAnalyzer,
     CurlResponseAnalyzer,
@@ -201,6 +206,32 @@ class InvalidProxyPort(aetest.Testcase):
             stats = curl.get_response("curl_pcap_proxy.txt")
         if "Connection timed out" not in stats:
             self.failed(f"Expected connection timeout, got {stats}")
+
+
+class SocksHandshakeSuccess(aetest.Testcase):
+
+    parameters = {"host": "https://wiki.archlinux.org/"}
+
+    @aetest.setup
+    def start_services(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-2"]
+
+    @aetest.test
+    def test_socks_handshake(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                timeout=30,
+                write_pcap=True,
+            )
+        pcap_file = f"{self.user_device.name}_tshark.pcap"
+        pcap_file = os.path.join(_temp_files_dir, pcap_file)
+        pcap_obj = TsharkPcap(pcap_file)
+
+        if pcap_obj.find_packets_in_stream(packet_type="socks")[0] is False:
+            self.failed("Socks 5 handshake sequence not found")
 
 
 class StatusCodesCorrectTransfer(aetest.Testcase):
@@ -587,7 +618,7 @@ class HostSupportAmazon(aetest.Testcase):
 class CommonCleanup(aetest.CommonCleanup):
     @aetest.subsection
     def stop_selenium(self, testbed):
-        user_device = testbed.devices["user-1"]
+        user_device = testbed.devices["user-2"]
         grid = SeleniumGrid(user_device)
         grid.stop()
 
@@ -600,7 +631,7 @@ if __name__ == "__main__":
     from pyats import topology
 
     logging.getLogger(__name__).setLevel(logging.DEBUG)
-    logging.getLogger("unicon").setLevel(logging.ERROR)
+    logging.getLogger("unicon").setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser(description="standalone parser")
     parser.add_argument("--testbed", dest="testbed", type=topology.loader.load)

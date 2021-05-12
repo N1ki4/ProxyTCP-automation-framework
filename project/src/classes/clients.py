@@ -32,17 +32,19 @@ class ChromeBase(ABC):
     the testing host for the analysis.
     """
 
-    def __init__(self, device: Device, options: list):
+    def __init__(self, device: Device, options: list, single_session_proxy: bool):
         """Constructor.
 
         Args:
             device (Device): device object, which grid will be triggered
             options (list): options for chrome as command line arguments
             pcap_file (str): file on the device where to store traffic capture
+            single_session_proxy (bool): enabe proxy switching on the session level
         """
 
         self._device = device
-        self._chromeoptions = None
+        self._singele_session_proxy = single_session_proxy
+        self._chromeoptions = options
         self._grid = None
         self._proxy_enabled = False
         self._proxy_connection = None
@@ -107,11 +109,9 @@ class Chrome(ChromeBase):
     """
 
     def __init__(
-        self,
-        device: Device,
-        options: list = None,
+        self, device: Device, options: list = None, single_session_proxy: bool = True
     ):
-        super().__init__(device, options)
+        super().__init__(device, options, single_session_proxy)
         self._driver = None
 
     def _init_driver(self):
@@ -159,7 +159,8 @@ class Chrome(ChromeBase):
         """
 
         if proxy_host is not None:
-            self._start_proxy(proxy_host)
+            if self._singele_session_proxy is True:
+                self._start_proxy(proxy_host)
             proxy_net_ifs = proxy_host.interfaces.names.pop()
             proxy_ip = proxy_host.interfaces[proxy_net_ifs].ipv4.ip.compressed
             self._set_proxy(proxy_ip, proxy_port, proxy_protocol)
@@ -175,7 +176,7 @@ class Chrome(ChromeBase):
                 self._get(host, timeout)
         else:
             self._get(host, timeout)
-        if proxy_host is not None:
+        if self._singele_session_proxy is True and proxy_host is not None:
             self._stop_proxy()
 
     def make_screenshot(self, name: str) -> None:
@@ -213,11 +214,9 @@ class ChromeAsync(ChromeBase):
     """
 
     def __init__(
-        self,
-        device: Device,
-        options: list = None,
+        self, device: Device, options: list = None, single_session_proxy: bool = True
     ):
-        super().__init__(device, options)
+        super().__init__(device, options, single_session_proxy)
         self._drivers = []
 
     def _init_drivers(self, amount: int):
@@ -276,7 +275,8 @@ class ChromeAsync(ChromeBase):
         """
 
         if proxy_host is not None:
-            self._start_proxy(proxy_host)
+            if self._singele_session_proxy is True:
+                self._start_proxy(proxy_host)
             proxy_net_ifs = proxy_host.interfaces.names.pop()
             proxy_ip = proxy_host.interfaces[proxy_net_ifs].ipv4.ip.compressed
             self._set_proxy(proxy_ip, proxy_port)
@@ -292,7 +292,7 @@ class ChromeAsync(ChromeBase):
                 self._async_get(hosts, timeout)
         else:
             self._async_get(hosts, timeout)
-        if proxy_host is not None:
+        if self._singele_session_proxy is True and proxy_host is not None:
             self._stop_proxy()
 
     def make_screenshots(self, name: str) -> None:
@@ -333,13 +333,15 @@ class Curl:
     the testing host for the analysis.
     """
 
-    def __init__(self, device: Device):
+    def __init__(self, device: Device, single_session_proxy: bool = True):
         """Constructor.
 
         Args:
             device (Device): device object, from where curl command will be sent
+            single_session_proxy (bool): enabe proxy switching on the session level
         """
         self._device = device
+        self._single_session_proxy = single_session_proxy
         self._proxy_connection = None
         self._response = None
 
@@ -399,7 +401,8 @@ class Curl:
         """
 
         if proxy_host is not None:
-            self._start_proxy(proxy_host)
+            if self._singele_session_proxy is True:
+                self._start_proxy(proxy_host)
             proxy_net_ifs = proxy_host.interfaces.names.pop()
             proxy_ip = (
                 proxy_host.interfaces[proxy_net_ifs].ipv4.ip.compressed
@@ -420,7 +423,7 @@ class Curl:
                 self._execute_command(curl_command)
         else:
             self._execute_command(curl_command)
-        if proxy_host is not None:
+        if self._singele_session_proxy is True and proxy_host is not None:
             self._stop_proxy()
 
     def get_response(self, file: str = None) -> str:
