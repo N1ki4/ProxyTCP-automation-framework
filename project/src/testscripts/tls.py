@@ -1,9 +1,14 @@
 # pylint: disable=no-self-use # pyATS-related exclusion
 # pylint: disable=attribute-defined-outside-init # pyATS-related exclusion
+import os
+
+
 from pyats import aetest
 
 
 from src.classes.remote_tools import SeleniumGrid
+from src.classes.tshark_pcap import TsharkPcap
+from src.classes.utils import _temp_files_dir
 from src.classes.clients import Chrome
 from src.classes.analyse import (
     BrowserResponseAnalyzer,
@@ -83,10 +88,62 @@ class ObsoleteTLS(aetest.Testcase):
             self.failed("Invalod response, no `ERR_SSL_OBSOLETE_VERSION` occured!")
 
 
+class TLSHandshake12(aetest.Testcase):
+
+    parameters = {"host": "https://tools.ietf.org/html/rfc5246"}
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def tls_1_2_handshake_test(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                timeout=30,
+                write_pcap=True,
+            )
+        pcap_file = f"{self.user_device.name}_tshark.pcap"
+        pcap_file = os.path.join(_temp_files_dir, pcap_file)
+        pcap_obj = TsharkPcap(pcap_file)
+
+        if pcap_obj.find_packets_in_stream(packet_type="tls1.2")[0] is False:
+            self.failed("TLS handshake sequence not found")
+
+
+class TLSHandshake13(aetest.Testcase):
+
+    parameters = {"host": "https://en.wikipedia.org/wiki/Internet_Protocol"}
+
+    @aetest.setup
+    def setup(self, testbed):
+        self.proxy_device = testbed.devices["proxy-vm"]
+        self.user_device = testbed.devices["user-1"]
+
+    @aetest.test
+    def tls_1_3_handshake_test(self, host):
+        with Chrome(self.user_device) as chrome:
+            chrome.open(
+                host=host,
+                proxy_host=self.proxy_device,
+                timeout=30,
+                write_pcap=True,
+            )
+        pcap_file = f"{self.user_device.name}_tshark.pcap"
+        pcap_file = os.path.join(_temp_files_dir, pcap_file)
+        pcap_obj = TsharkPcap(pcap_file)
+
+        if pcap_obj.find_packets_in_stream(packet_type="tls1.3")[0] is False:
+            self.failed("TLS handshake sequence not found")
+
+
 class CommonCleanup(aetest.CommonCleanup):
     @aetest.subsection
     def stop_selenium(self, testbed):
-        user_device = testbed.devices["user-2"]
+        user_device = testbed.devices["user-1"]
         grid = SeleniumGrid(user_device)
         grid.stop()
 
