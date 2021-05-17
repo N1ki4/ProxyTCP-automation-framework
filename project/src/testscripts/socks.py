@@ -10,16 +10,24 @@ from src.classes.remote_tools import SeleniumGrid
 from src.classes.clients import Chrome, Curl
 from src.classes.tshark_pcap import TsharkPcap
 from src.classes.utils import _temp_files_dir
-from src.classes.analyse import (
-    CurlResponseAnalyzer,
-)
+from src.classes.analyse import CurlResponseAnalyzer
 
 
 class CommonSetup(aetest.CommonSetup):
     @aetest.subsection
-    def start_selenium(self, testbed):
-        user_device = testbed.devices["user-1"]
-        grid = SeleniumGrid(user_device)
+    def update_testscript_parameters(self, testbed):
+        user_device = testbed.devices["user-2"]
+        proxy_device = testbed.devices["proxy-vm"]
+        self.parent.parameters.update(
+            {
+                "user": user_device,
+                "proxy": proxy_device,
+            }
+        )
+
+    @aetest.subsection
+    def start_selenium(self, user):
+        grid = SeleniumGrid(user)
         grid.start()
 
 
@@ -27,21 +35,13 @@ class SocksHandshakeSuccess(aetest.Testcase):
 
     parameters = {"host": "https://wiki.archlinux.org/"}
 
-    @aetest.setup
-    def start_services(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
     @aetest.test
-    def test_socks_handshake(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                timeout=30,
-                write_pcap=True,
-            )
-        pcap_file = f"{self.user_device.name}_tshark.pcap"
+    def test_socks_handshake(self, user, proxy, host):
+
+        with Chrome(grid_server=user, proxy_server=proxy, traffic_dump=True) as chrome:
+            chrome.get(host)
+
+        pcap_file = f"{user.name}_tshark.pcap"
         pcap_file = os.path.join(_temp_files_dir, pcap_file)
         pcap_obj = TsharkPcap(pcap_file)
 
@@ -66,21 +66,18 @@ class StatusCodesCorrectTransfer(aetest.Testcase):
     }
 
     @aetest.setup
-    def start_services(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
+    def setup_loop(self):
         aetest.loop.mark(
             self.test_code, host=self.parameters["hosts"], code=self.parameters["codes"]
         )
 
     @aetest.test
-    def test_code(self, host, code):
-        with Curl(self.user_device) as curl:
-            curl.send(
-                host=host, proxy_host=self.proxy_device, timeout=10, write_pcap=False
-            )
-            stats = curl.get_response("curl_pcap_proxy.txt")
+    def test_code(self, user, proxy, host, code):
+
+        with Curl(client_server=user, proxy_server=proxy, session_timeout=10) as curl:
+            curl.get(host)
+            stats = curl.get_response()
+
         data = CurlResponseAnalyzer(stats)
         status_code = data.get_status_code()
         if status_code != code:
@@ -91,22 +88,14 @@ class HTTPNotSupported(aetest.Testcase):
 
     parameters = {"host": "http://lutasprava.com"}
 
-    @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
     @aetest.test
-    def connect_http(self, host):
-        with Curl(self.user_device) as curl:
-            curl.send(
-                host=host,
-                proxy_host=self.proxy_device,
-                timeout=10,
-                write_pcap=False,
-            )
-            stats = curl.get_response("curl_pcap_proxy.txt")
-        if "Connection timed out" not in stats:
+    def connect_http(self, user, proxy, host):
+
+        with Curl(client_server=user, proxy_server=proxy, session_timeout=10) as curl:
+            curl.get(host)
+            stats = curl.get_response("omg.txt")
+
+        if "Operation timed out" not in stats:
             self.failed(f"Expected connection timeout, got {stats}")
 
 
@@ -114,22 +103,14 @@ class FTPNotSupported(aetest.Testcase):
 
     parameters = {"host": "ftp://speedtest.tele2.net/"}
 
-    @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
     @aetest.test
-    def connect_ftp(self, host):
-        with Curl(self.user_device) as curl:
-            curl.send(
-                host=host,
-                proxy_host=self.proxy_device,
-                timeout=10,
-                write_pcap=False,
-            )
-            stats = curl.get_response("curl_pcap_proxy.txt")
-        if "Connection timed out" not in stats:
+    def connect_http(self, user, proxy, host):
+
+        with Curl(client_server=user, proxy_server=proxy, session_timeout=10) as curl:
+            curl.get(host)
+            stats = curl.get_response()
+
+        if "Operation timed out" not in stats:
             self.failed(f"Expected connection timeout, got {stats}")
 
 
@@ -137,31 +118,28 @@ class IncorrectProxyProtocol(aetest.Testcase):
 
     parameters = {"host": "https://wiki.archlinux.org/ ", "protocol": "socks4"}
 
-    @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
     @aetest.test
-    def incorrect_protocol_test(self, host, protocol):
-        with Curl(self.user_device) as curl:
-            curl.send(
-                host=host,
-                proxy_host=self.proxy_device,
-                proxy_protocol=protocol,
-                timeout=10,
-                write_pcap=False,
+    def incorrect_protocol_test(self, user, proxy, host, protocol):
+
+        with Curl(
+            client_server=user,
+            proxy_server=proxy,
+            session_timeout=10,
+            proxy_protocol=protocol,
+        ) as curl:
+            curl.get(host)
+            stats = curl.get_response()
+
+        if "Failed to receive SOCKS4 connect request ack" not in stats:
+            self.failed(
+                f"Expected `Failed to receive SOCKS4 connect request ack`, got {stats}"
             )
-            stats = curl.get_response("curl_pcap_proxy.txt")
-        if "Connection timed out" not in stats:
-            self.failed(f"Expected connection timeout, got {stats}")
 
 
 class CommonCleanup(aetest.CommonCleanup):
     @aetest.subsection
-    def stop_selenium(self, testbed):
-        user_device = testbed.devices["user-2"]
-        grid = SeleniumGrid(user_device)
+    def stop_selenium(self, user):
+        grid = SeleniumGrid(user)
         grid.stop()
 
 
@@ -173,7 +151,7 @@ if __name__ == "__main__":
     from pyats import topology
 
     logging.getLogger(__name__).setLevel(logging.DEBUG)
-    logging.getLogger("unicon").setLevel(logging.INFO)
+    logging.getLogger("unicon").setLevel(logging.ERROR)
 
     parser = argparse.ArgumentParser(description="standalone parser")
     parser.add_argument("--testbed", dest="testbed", type=topology.loader.load)

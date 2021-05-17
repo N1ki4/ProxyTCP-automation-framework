@@ -1,21 +1,23 @@
 import re
 import json
 import socket
-import logging
 import asyncio
+import logging
 from concurrent.futures.thread import ThreadPoolExecutor
 from abc import ABC
+from typing import Union
+
 
 from selenium import webdriver
 from selenium.common import exceptions
 from pyats.topology import Device
 
-from src.classes import utils
+
+from src.classes.utils import TrafficDump
 from src.classes.sut import Proxy
-from src.classes.analyse import BrowserStatKeys
+
 
 _log = logging.getLogger(__name__).setLevel(logging.INFO)
-logging.getLogger("unicon").setLevel(logging.INFO)
 
 
 def get_host_ip(host) -> str:
@@ -24,82 +26,127 @@ def get_host_ip(host) -> str:
     return socket.gethostbyname(host)
 
 
+class BrowserStats:
+    """Browser response data handler."""
+
+    LOADING_TIME = "loading_time"
+    PERF_LOGS = "performance_logs"
+    BROW_LOGS = "browser_logs"
+    CRIT_ERROR = "critical_error"
+
+    @staticmethod
+    def serializer(response: Union[list, dict]) -> Union[list, dict]:
+        """Serialize browser response data."""
+        key = BrowserStats.PERF_LOGS
+
+        if isinstance(response, list):
+            for entry in response:
+                for index, _ in enumerate(entry[key]):
+                    entry[key][index]["message"] = json.loads(
+                        entry[key][index]["message"]
+                    )
+
+        elif isinstance(response, dict) and "critical_error" not in response.keys():
+            for index, _ in enumerate(response[key]):
+                response[key][index]["message"] = json.loads(
+                    response[key][index]["message"]
+                )
+        return response
+
+
 class ChromeBase(ABC):
     """ChromeBase.
 
-    Context manager which inplements chrome functionality
+    Context manager which inplements selenium chrome functionality
     and combine it with pcap writing and sending them back to
     the testing host for the analysis.
     """
 
-    def __init__(self, device: Device, options: list, single_session_proxy: bool):
+    def __init__(
+        self,
+        grid_server: Device,
+        session_timeout: int,
+        chrome_arguments: list,
+        proxy_server: Device,
+        proxy_protocol: str,
+        proxy_ip: str,
+        proxy_port: str,
+        session_wide_proxy: bool,
+        traffic_dump: bool,
+    ):
         """Constructor.
 
         Args:
-            device (Device): device object, which grid will be triggered
-            options (list): options for chrome as command line arguments
-            pcap_file (str): file on the device where to store traffic capture
-            single_session_proxy (bool): enabe proxy switching on the session level
+            grid_server (Device): server, from where selenium traffic will be generated
+            chrome_arguments (list): chrome as command line arguments
+            session_timeout (int): webdriver session timeout
+            proxy_server (Device): proxy hosting server
+            proxy_protocol (str): proxy protocol
+            proxy_ip (str): proxy ip
+            proxy_port (str): proxy port
+            session_wide_proxy (bool): enabe proxy switching on the session level
+            (if proxy is defined)
+            traffic_dump (str): enable traffic recording via tshark
         """
 
-        self._device = device
-        self._singele_session_proxy = single_session_proxy
-        self._chromeoptions = options
+        self._grid_server = grid_server
+        self._session_timeout = session_timeout
+        self._chromeoptions = None
         self._grid = None
         self._proxy_enabled = False
-        self._proxy_connection = None
+        self._proxy_controller = None
+        self._tshark_contrller = None
         self._exceptions = []
 
         # apply options
         chromeoptions = webdriver.ChromeOptions()
-        if isinstance(options, list):
-            for entry in options:
+        if isinstance(chrome_arguments, list):
+            for entry in chrome_arguments:
                 chromeoptions.add_argument(entry)
         self._chromeoptions = chromeoptions
 
-        # enable logging (do not change)
+        # set proxy
+        if isinstance(proxy_server, Device):
+            if not proxy_ip:
+                proxy_net_ifs = proxy_server.interfaces.names.pop()
+                proxy_ip = proxy_server.interfaces[proxy_net_ifs].ipv4.ip.compressed
+            proxy_protocol = "socks5" if proxy_protocol is None else proxy_protocol
+            proxy_port = "1080" if proxy_port is None else proxy_port
+            option = f"--proxy-server={proxy_protocol}://{proxy_ip}:{proxy_port}"
+            self._chromeoptions.add_argument(option)
+            self._proxy_enabled = True
+
+            if session_wide_proxy is True:
+                self._proxy_controller = Proxy(proxy_server)
+
+        # enable webdriver logs collection
         self._chromeoptions.capabilities["goog:loggingPrefs"] = {
             "performance": "ALL",
             "browser": "ALL",
         }
 
         # identify selenium grid
-        connection = self._device.connections.cli.command
+        connection = self._grid_server.connections.cli.command
         host = re.compile(r"ssh -i (/.*)+\s(\w+)@(.*)").search(connection)[3]
         grid = f"http://{host}:4444/wd/hub"
         self._grid = grid
 
-    def _set_proxy(
-        self, proxy_ip: str, proxy_port: str = None, proxy_protocol: str = None
-    ) -> None:
-        """Set proxy servere parameters.
-
-        Args:
-            proxy_ip (str): ip address of the proxy host
-            proxy_port (str): tcp port of the proxy host, 1080 is default for socks5
-            proxy_protocol (str): proxy protocol, default socks5
-        """
-        proxy_protocol = "socks5" if proxy_protocol is None else proxy_protocol
-        proxy_port = "1080" if proxy_port is None else proxy_port
-        option = f"--proxy-server={proxy_protocol}://{proxy_ip}:{proxy_port}"
-        self._add_option(option)
-        self._proxy_enabled = True
-
-    def _start_proxy(self, proxy_host: Device):
-        self._proxy_connection = Proxy(proxy_host)
-        self._proxy_connection.start()
-
-    def _stop_proxy(self):
-        self._proxy_connection.stop()
-
-    def _add_option(self, option: str) -> None:
-        self._chromeoptions.add_argument(option)
+        # initialize tshark
+        if traffic_dump is True:
+            self._tshark_contrller = TrafficDump(grid_server, proxy_server)
 
     def __enter__(self):
+        if isinstance(self._proxy_controller, Proxy):
+            self._proxy_controller.start()
+        if isinstance(self._tshark_contrller, TrafficDump):
+            self._tshark_contrller.start_capturing()
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        pass
+        if isinstance(self._tshark_contrller, TrafficDump):
+            self._tshark_contrller.stop_capturing()
+        if isinstance(self._proxy_controller, Proxy):
+            self._proxy_controller.stop()
 
 
 class Chrome(ChromeBase):
@@ -109,25 +156,75 @@ class Chrome(ChromeBase):
     """
 
     def __init__(
-        self, device: Device, options: list = None, single_session_proxy: bool = True
+        self,
+        grid_server: Device,
+        session_timeout: int = 30,
+        chrome_arguments: list = None,
+        proxy_server: Device = None,
+        proxy_protocol: str = None,
+        proxy_ip: str = None,
+        proxy_port: str = None,
+        session_wide_proxy: bool = True,
+        traffic_dump: bool = False,
     ):
-        super().__init__(device, options, single_session_proxy)
+        super().__init__(
+            grid_server,
+            session_timeout,
+            chrome_arguments,
+            proxy_server,
+            proxy_protocol,
+            proxy_ip,
+            proxy_port,
+            session_wide_proxy,
+            traffic_dump,
+        )
         self._driver = None
 
-    def _init_driver(self):
-        """Initialize driver."""
+        # initialize driver
         self._driver = webdriver.Remote(
             command_executor=self._grid, options=self._chromeoptions
         )
+        if isinstance(self._session_timeout, int):
+            self._driver.implicitly_wait(self._session_timeout)
 
-    def _get(self, host: str, timeout: int):
-        """Execute driver.get method with explicitly provided timeout."""
-        if isinstance(timeout, int):
-            self._driver.implicitly_wait(timeout)
+    @property
+    def driver(self) -> webdriver.Remote:
+        return self._driver
+
+    def get(self, host: str) -> None:
         try:
             self._driver.get(host)
         except exceptions.WebDriverException as error:
             self._exceptions.append(error)
+
+    def refresh(self) -> None:
+        self._driver.refresh()
+
+    def get_stats(self, write_to_file: str = None) -> dict:
+        """Get results for post analyzis."""
+        stats = {}
+        if not self._exceptions:
+            loading_time = self._get_page_loading_time()
+            perfornace_logs = self._driver.get_log("performance")
+            browser_logs = self._driver.get_log("browser")
+
+            stats = {
+                BrowserStats.LOADING_TIME: loading_time,
+                BrowserStats.PERF_LOGS: perfornace_logs,
+                BrowserStats.BROW_LOGS: browser_logs,
+            }
+        else:
+            error = self._exceptions[0]
+            stats = {BrowserStats.CRIT_ERROR: error.msg}
+        data = BrowserStats.serializer(stats)
+        if isinstance(write_to_file, str):
+            with open(write_to_file, "w") as f:
+                f.write(json.dumps(data))
+
+        return data
+
+    def make_screenshot(self, name: str) -> None:
+        self._driver.save_screenshot(f"{name}.png")
 
     def _get_page_loading_time(self) -> int:
         navigation_start = self._driver.execute_script(
@@ -138,72 +235,8 @@ class Chrome(ChromeBase):
         )
         return dom_complete - navigation_start
 
-    def open(
-        self,
-        host: str,
-        timeout: int = None,
-        proxy_host: Device = None,
-        proxy_port: str = None,
-        proxy_protocol: str = None,
-        write_pcap: bool = True,
-    ) -> None:
-        """Main execution method.
-
-        Args:
-            host (str): destination web resource url
-            timeout (int): request timeout
-            proxy_host (Device): device with proxy server installed
-            proxy_port (str): tcp port of the proxy host, 1080 is default for socks5
-            proxy_protocol (str): proxy protocol, default socks5
-            write_pcap (bool): capture traffic with tshark and write to file
-        """
-
-        if proxy_host is not None:
-            if self._singele_session_proxy is True:
-                self._start_proxy(proxy_host)
-            proxy_net_ifs = proxy_host.interfaces.names.pop()
-            proxy_ip = proxy_host.interfaces[proxy_net_ifs].ipv4.ip.compressed
-            self._set_proxy(proxy_ip, proxy_port, proxy_protocol)
-
-        self._init_driver()
-
-        if write_pcap is True:
-            with utils.TrafficCaptureConnection(
-                self._device, proxy_host=proxy_host
-            ) as con:
-                ip_filter = get_host_ip(host)
-                con.start_capturing(filters=f"host {ip_filter}")
-                self._get(host, timeout)
-        else:
-            self._get(host, timeout)
-        if self._singele_session_proxy is True and proxy_host is not None:
-            self._stop_proxy()
-
-    def make_screenshot(self, name: str) -> None:
-        self._driver.save_screenshot(f"{name}.png")
-
-    def get_stats(self, file: str = None) -> dict:
-        """Get results for post analyzis."""
-        if not self._exceptions:
-            loading_time = self._get_page_loading_time()
-            perfornace_logs = self._driver.get_log("performance")
-            browser_logs = self._driver.get_log("browser")
-
-            stats = {
-                BrowserStatKeys.LOADING_TIME: loading_time,
-                BrowserStatKeys.PERF_LOGS: perfornace_logs,
-                BrowserStatKeys.BROW_LOGS: browser_logs,
-            }
-        else:
-            error = self._exceptions[0]
-            stats = {BrowserStatKeys.CRIT_ERROR: error.msg}
-        if isinstance(file, str):
-            with open(file, "w") as f:
-                f.write(json.dumps(stats))
-
-        return stats
-
     def __exit__(self, exc_type, exc_value, exc_traceback):
+        super().__exit__(exc_type, exc_value, exc_traceback)
         self._driver.quit()
 
 
@@ -214,38 +247,79 @@ class ChromeAsync(ChromeBase):
     """
 
     def __init__(
-        self, device: Device, options: list = None, single_session_proxy: bool = True
+        self,
+        grid_server: Device,
+        max_num_of_instances: int = 4,
+        session_timeout: int = 30,
+        chrome_arguments: list = None,
+        proxy_server: Device = None,
+        proxy_protocol: str = None,
+        proxy_ip: str = None,
+        proxy_port: str = None,
+        session_wide_proxy: bool = True,
+        traffic_dump: bool = False,
     ):
-        super().__init__(device, options, single_session_proxy)
+        super().__init__(
+            grid_server,
+            session_timeout,
+            chrome_arguments,
+            proxy_server,
+            proxy_protocol,
+            proxy_ip,
+            proxy_port,
+            session_wide_proxy,
+            traffic_dump,
+        )
+        self._max_num_of_instances = max_num_of_instances
         self._drivers = []
 
-    def _init_drivers(self, amount: int):
-        """Initialize drivers."""
-        self._drivers = []
-        if isinstance(amount, int):
-            for _ in range(amount):
-                self._drivers.append(
-                    webdriver.Remote(
-                        command_executor=self._grid, options=self._chromeoptions
-                    )
-                )
+        # initialize drivers
+        driver = webdriver.Remote(
+            command_executor=self._grid, options=self._chromeoptions
+        )
+        if isinstance(self._session_timeout, int):
+            driver.implicitly_wait(self._session_timeout)
+        if isinstance(max_num_of_instances, int):
+            self._drivers = [driver] * max_num_of_instances
 
-    def _async_get(self, hosts: list, timeout: int):
-        """Async Get.
+    def get(self, hosts: list):
+        """Get.
 
         Asynchronously execute get methods of every driver in the
         self._drivers list with explicitly provided timeout.
         """
-        if isinstance(timeout, int):
-            for driver in self._drivers:
-                driver.implicitly_wait(timeout)
-
-        executor = ThreadPoolExecutor(4)
+        executor = ThreadPoolExecutor(self._max_num_of_instances)
         loop = asyncio.get_event_loop()
         for index, host in enumerate(hosts):
             driver = self._drivers[index]
             loop.run_in_executor(executor, driver.get, host)
         loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks(loop)))
+
+    def make_screenshots(self, name: str) -> None:
+        for index, driver in enumerate(self._drivers):
+            driver.save_screenshot(f"{name}_{index}.png")
+
+    def get_stats(self, write_to_file: str = None) -> list:
+        """Get results for post analyzis."""
+        stats = []
+        for driver in self._drivers:
+            loading_time = self._get_page_loading_time(driver)
+            perfornace_logs = driver.get_log("performance")
+            browser_logs = driver.get_log("browser")
+
+            stats.append(
+                {
+                    BrowserStats.LOADING_TIME: loading_time,
+                    BrowserStats.PERF_LOGS: perfornace_logs,
+                    BrowserStats.BROW_LOGS: browser_logs,
+                }
+            )
+        data = BrowserStats.serializer(stats)
+        if isinstance(write_to_file, str):
+            with open(write_to_file, "w") as f:
+                f.write(json.dumps(data))
+
+        return data
 
     def _get_page_loading_time(self, driver) -> int:
         navigation_start = driver.execute_script(
@@ -256,71 +330,8 @@ class ChromeAsync(ChromeBase):
         )
         return dom_complete - navigation_start
 
-    def open(
-        self,
-        hosts: list,
-        timeout: int = None,
-        proxy_host: Device = None,
-        proxy_port: str = None,
-        write_pcap: bool = True,
-    ) -> None:
-        """Main execution method.
-
-        Args:
-            hosts (list): list of destination web resources urls
-            timeout (int): request timeout
-            proxy_host (Device): device with proxy server installed
-            proxy_port (str): tcp port of the proxy host, 1080 is default for socks5
-            write_pcap (bool): capture traffic with tshark and write to file
-        """
-
-        if proxy_host is not None:
-            if self._singele_session_proxy is True:
-                self._start_proxy(proxy_host)
-            proxy_net_ifs = proxy_host.interfaces.names.pop()
-            proxy_ip = proxy_host.interfaces[proxy_net_ifs].ipv4.ip.compressed
-            self._set_proxy(proxy_ip, proxy_port)
-
-        amount_of_drivers = len(hosts)
-        self._init_drivers(amount_of_drivers)
-
-        if write_pcap is True:
-            with utils.TrafficCaptureConnection(
-                self._device, proxy_host=proxy_host
-            ) as con:
-                con.start_capturing()
-                self._async_get(hosts, timeout)
-        else:
-            self._async_get(hosts, timeout)
-        if self._singele_session_proxy is True and proxy_host is not None:
-            self._stop_proxy()
-
-    def make_screenshots(self, name: str) -> None:
-        for index, driver in enumerate(self._drivers):
-            driver.save_screenshot(f"{name}_{index}.png")
-
-    def get_stats(self, file: str = None) -> list:
-        """Get results for post analyzis."""
-        stats = []
-        for driver in self._drivers:
-            loading_time = self._get_page_loading_time(driver)
-            perfornace_logs = driver.get_log("performance")
-            browser_logs = driver.get_log("browser")
-
-            stats.append(
-                {
-                    BrowserStatKeys.LOADING_TIME: loading_time,
-                    BrowserStatKeys.PERF_LOGS: perfornace_logs,
-                    BrowserStatKeys.BROW_LOGS: browser_logs,
-                }
-            )
-        if isinstance(file, str):
-            with open(file, "w") as f:
-                f.write(json.dumps(stats))
-
-        return stats
-
     def __exit__(self, exc_type, exc_value, exc_traceback):
+        super().__exit__(exc_type, exc_value, exc_traceback)
         for driver in self._drivers:
             driver.quit()
 
@@ -333,98 +344,67 @@ class Curl:
     the testing host for the analysis.
     """
 
-    def __init__(self, device: Device, single_session_proxy: bool = True):
+    def __init__(
+        self,
+        client_server: Device,
+        session_timeout: int = 30,
+        proxy_server: Device = None,
+        proxy_protocol: str = None,
+        proxy_ip: str = None,
+        proxy_port: str = None,
+        session_wide_proxy: bool = True,
+        traffic_dump: bool = False,
+    ):
         """Constructor.
 
         Args:
-            device (Device): device object, from where curl command will be sent
-            single_session_proxy (bool): enabe proxy switching on the session level
+            client_server (Device): server, from where curl request will be sent
+            session_timeout (int): curl response timeout
+            proxy_server (Device): proxy hosting server
+            proxy_protocol (str): proxy protocol
+            proxy_ip (str): proxy ip
+            proxy_port (str): proxy port
+            session_wide_proxy (bool): enabe proxy switching on the session level
+            (if proxy is defined)
+            traffic_dump (str): enable traffic recording via tshark
         """
-        self._device = device
-        self._single_session_proxy = single_session_proxy
-        self._proxy_connection = None
+        self._client_server = client_server
+        self._session_timeout = session_timeout
+        self._base_command = "curl -I "
+        self._command_args = ""
+        self._proxy_enabled = False
+        self._proxy_controller = None
+        self._tshark_contrller = None
         self._response = None
 
-    def _build_command(
-        self,
-        host: str,
-        timeout: int = None,
-        proxy_ip: str = None,
-        proxy_port: str = None,
-        proxy_protocol: str = None,
-    ):
-        proxy_protocol = (
-            "--socks5-hostname "
-            if proxy_protocol is None
-            else f"--proxy {proxy_protocol}://"
-        )
-        proxy_port = "1080" if proxy_port is None else proxy_port
-
-        base_command = f"curl -I {host}"
-        command = base_command
-        if proxy_ip is not None:
-            command += f" {proxy_protocol}{proxy_ip}:{proxy_port}"
-        if timeout is not None:
-            command += f" --connect-timeout {timeout}"
-        return command
-
-    def _execute_command(self, command):
-        self._response = self._device.curl.execute(command)
-
-    def _start_proxy(self, proxy_host: Device):
-        self._proxy_connection = Proxy(proxy_host)
-        self._proxy_connection.start()
-
-    def _stop_proxy(self):
-        self._proxy_connection.stop()
-
-    def send(
-        self,
-        host: str,
-        timeout: int = None,
-        proxy_host: Device = None,
-        proxy_ip: str = None,
-        proxy_port: str = None,
-        proxy_protocol: str = None,
-        write_pcap: bool = True,
-    ) -> None:
-        """Execute curl command on the device.
-
-        Args:
-            host (str): destination web resource url
-            timeout (int): request timeout
-            proxy_host (Device): device with proxy server installed
-            proxy_ip (str): ip of the proxy host, usually not specified
-            proxy_port (str): tcp port of the proxy host, 1080 is default
-            proxy_protocol (str): proxy protocol, default socks5
-            write_pcap (bool): capture traffic with tshark and write to file
-        """
-
-        if proxy_host is not None:
-            if self._singele_session_proxy is True:
-                self._start_proxy(proxy_host)
-            proxy_net_ifs = proxy_host.interfaces.names.pop()
-            proxy_ip = (
-                proxy_host.interfaces[proxy_net_ifs].ipv4.ip.compressed
-                if not proxy_ip
-                else proxy_ip
+        # set proxy
+        if isinstance(proxy_server, Device):
+            if not proxy_ip:
+                proxy_net_ifs = proxy_server.interfaces.names.pop()
+                proxy_ip = proxy_server.interfaces[proxy_net_ifs].ipv4.ip.compressed
+            proxy_protocol = (
+                " --socks5-hostname "
+                if proxy_protocol is None
+                else f" --proxy {proxy_protocol}://"
             )
+            proxy_port = "1080" if proxy_port is None else proxy_port
+            self._command_args += f"{proxy_protocol}{proxy_ip}:{proxy_port}"
+            self._proxy_enabled = True
 
-        curl_command = self._build_command(
-            host, timeout, proxy_ip, proxy_port, proxy_protocol
-        )
+            if session_wide_proxy is True:
+                self._proxy_controller = Proxy(proxy_server)
 
-        if write_pcap is True:
-            with utils.TrafficCaptureConnection(
-                self._device, proxy_host=proxy_host
-            ) as con:
-                ip_filter = get_host_ip(host)
-                con.start_capturing(filters=f"host {ip_filter}")
-                self._execute_command(curl_command)
-        else:
-            self._execute_command(curl_command)
-        if self._singele_session_proxy is True and proxy_host is not None:
-            self._stop_proxy()
+        # set timeout
+        if isinstance(session_timeout, int):
+            self._command_args += f" --max-time {session_timeout}"
+
+        # initialize tshark
+        if traffic_dump is True:
+            self._tshark_contrller = TrafficDump(client_server, proxy_server)
+
+    def get(self, host: str) -> None:
+        command = self._base_command + host + self._command_args
+        self._response = self._client_server.curl.execute(command)
 
     def get_response(self, file: str = None) -> str:
         if isinstance(file, str):
@@ -433,11 +413,23 @@ class Curl:
         return self._response
 
     def __enter__(self):
-        self._device.connect(alias="curl")
+        self._client_server.connect(alias="curl")
+        if isinstance(self._proxy_controller, Proxy):
+            self._proxy_controller.start()
+            print("start proxy")
+        if isinstance(self._tshark_contrller, TrafficDump):
+            self._tshark_contrller.start_capturing()
+            print("start tshark")
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self._device.curl.disconnect()
+        if isinstance(self._tshark_contrller, TrafficDump):
+            self._tshark_contrller.stop_capturing()
+            print("stop tshark")
+        if isinstance(self._proxy_controller, Proxy):
+            self._proxy_controller.stop()
+            print("stop proxy")
+        self._client_server.curl.disconnect()
 
 
 # if __name__ == "__main__":
@@ -447,101 +439,22 @@ class Curl:
 #     device = testbed.devices['user-2']
 #     proxy = testbed.devices['proxy-vm']
 
-#     options = [
-#         "--ignore-certificate-errors",
-#         "--ignore-ssl-errors=yes"
-#     ]
 
-# # single chrome no proxy no pcap
-# with Chrome(device) as chrome:
-#     chrome.open(
-#         host='https://tools.ietf.org:65535',
-#         proxy_host=proxy,
-#         write_pcap=False,
-#     )
-#     chrome.get_stats('A_proxy_port_65535.json')
+# with Chrome(grid_server=device) as chrome:
+#     chrome.get(host='https://tools.ietf.org')
+#     chrome.get_stats('B_noproxy_nopcap.json')
 
-#     # # single chrome no proxy pcap
-#     # with Chrome(device) as chrome:
-#     #     chrome.open(
-#     #         host='https://receipt1.seiko-cybertime.jp',
-#     #     )
-#     #     chrome.get_stats('singlechrome_pcap_noproxy.json')
+# with Chrome(grid_server=device, proxy_server=proxy) as chrome:
+#     chrome.get(host='https://tools.ietf.org')
+#     chrome.get_stats('B_proxy_nopcap.json')
+#     chrome.make_screenshot('B_proxy_nopcap')
 
-#     # # single chrome no pcap proxy
-#     # with Chrome(device) as chrome:
-#     #     chrome.open(
-#     #         host='https://receipt1.seiko-cybertime.jp',
-#     #         proxy_host=proxy,
-#     #         write_pcap=False
-#     #     )
-#     #     chrome.get_stats('singlechrome_nopcap_proxy.json')
+# with Chrome(grid_server=device, traffic_dump=True) as chrome:
+#     chrome.get(host='https://tools.ietf.org')
+#     chrome.get_stats('B_noproxy_pcap.json')
+#     chrome.make_screenshot('B_noproxy_nopcap')
 
-#     # single chrome pcap proxy
-#     # with Chrome(device) as chrome:
-#     #     chrome.open(
-#     #         host='https://receipt1.seiko-cybertime.jp',
-#     #         proxy_host=proxy,
-#     #     )
-#     #     chrome.get_stats('singlechrome_pcap_proxy.json')
-
-#     # # async chrome no proxy
-#     # with ChromeAsync(device) as chrome:
-#     #     chrome.open(
-#     #         hosts=[
-#     #             "https://wiki.archlinux.org/",
-#     #             "https://tools.ietf.org/html/rfc1928",
-#     #             "https://docs.docker.com/"
-#     #         ],
-#     #         write_pcap=False
-#     #     )
-#     #     chrome.get_stats('asyncchrome_noproxy.json')
-
-#     # # async chrome proxy
-#     # with ChromeAsync(device) as chrome:
-#     #     chrome.open(
-#     #         hosts=[
-#     #             "https://wiki.archlinux.org/",
-#     #             "https://tools.ietf.org/html/rfc1928",
-#     #             "https://dev.mysql.com/doc/refman/8.0/en/"
-#     #         ],
-#     #         proxy_host=proxy,
-#     #         write_pcap=False,
-#     #         timeout=30
-#     #     )
-#     #     chrome.get_stats('asyncchrome_proxy.json')
-#     #     chrome.make_screenshots('async_chrome')
-
-#     # # curl no proxy no pcap
-#     # with Curl(device) as curl:
-#     #     curl.send(
-#     #         host='https://tools.ietf.org/html/rfc1928',
-#     #         write_pcap=False
-#     #     )
-#     #     curl.get_response('curl_nopcap_noproxy.txt')
-
-#     # # curl no proxy pcap
-#     # with Curl(device) as curl:
-#     #     curl.send(
-#     #         host='https://tools.ietf.org/html/rfc1928',
-#     #         write_pcap=True
-#     #     )
-#     #     curl.get_response('curl_pcap_noproxy.txt')
-
-#     # # curl proxy no pcap
-#     # with Curl(device) as curl:
-#     #     curl.send(
-#     #         host='https://httpstat.us/404',
-#     #         proxy_host=proxy,
-#     #         write_pcap=False
-#     #     )
-#     #     curl.get_response('curl_nopcap_proxy.txt')
-
-#     # # curl proxy pcap
-#     # with Curl(device) as curl:
-#     #     curl.send(
-#     #         host='https://httpstat.us/403',
-#     #         proxy_host=proxy,
-#     #         write_pcap=True
-#     #     )
-#     #     curl.get_response('curl_pcap_proxy.txt')
+# with Chrome(grid_server=device, proxy_server=proxy, traffic_dump=True) as chrome:
+#     chrome.get(host='https://tools.ietf.org')
+#     chrome.get_stats('B_proxy_pcap.json')
+#     chrome.make_screenshot('B_proxy_nopcap')

@@ -10,17 +10,24 @@ from src.classes.remote_tools import SeleniumGrid
 from src.classes.tshark_pcap import TsharkPcap
 from src.classes.utils import _temp_files_dir
 from src.classes.clients import Chrome
-from src.classes.analyse import (
-    BrowserResponseAnalyzer,
-    serializer,
-)
+from src.classes.analyse import BrowserResponseAnalyzer
 
 
 class CommonSetup(aetest.CommonSetup):
     @aetest.subsection
-    def start_selenium(self, testbed):
-        user_device = testbed.devices["user-1"]
-        grid = SeleniumGrid(user_device)
+    def update_testscript_parameters(self, testbed):
+        user_device = testbed.devices["user-2"]
+        proxy_device = testbed.devices["proxy-vm"]
+        self.parent.parameters.update(
+            {
+                "user": user_device,
+                "proxy": proxy_device,
+            }
+        )
+
+    @aetest.subsection
+    def start_selenium(self, user):
+        grid = SeleniumGrid(user)
         grid.start()
 
 
@@ -28,23 +35,14 @@ class BrockenCerts(aetest.Testcase):
 
     parameters = {"host": "https://www.grupoemsa.org/"}
 
-    @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
     @aetest.test
-    def brocken_certs_test(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                write_pcap=False,
-                timeout=30,
-            )
-            stats = chrome.get_stats("response.json")
-        serialized_stats = serializer(stats)
-        data = BrowserResponseAnalyzer(serialized_stats)
+    def brocken_certs_test(self, user, proxy, host):
+
+        with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+            chrome.get(host)
+            stats = chrome.get_stats()
+
+        data = BrowserResponseAnalyzer(stats)
         errors = data.get_browser_errors()
         pass_condition = len(errors) >= 1 and "ERR_CERT_AUTHORITY_INVALID" in errors[0]
         if not pass_condition:
@@ -55,25 +53,15 @@ class ObsoleteTLS(aetest.Testcase):
 
     parameters = {"host": "https://receipt1.seiko-cybertime.jp"}
 
-    @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
     @aetest.test
-    def obsolete_tls_test(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                write_pcap=False,
-                timeout=30,
-            )
-            stats = chrome.get_stats("response.json")
-        serialized_stats = serializer(stats)
-        data = BrowserResponseAnalyzer(serialized_stats)
+    def obsolete_tls_test(self, user, proxy, host):
+
+        with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+            chrome.get(host)
+            stats = chrome.get_stats()
+
+        data = BrowserResponseAnalyzer(stats)
         errors = data.get_browser_errors()
-        print(errors)
         expected_message = (
             f"The connection used to load resources from {host}"
             " used TLS 1.0 or TLS 1.1, which are deprecated and will be disabled"
@@ -90,23 +78,22 @@ class ObsoleteTLS(aetest.Testcase):
 
 class TLSHandshake12(aetest.Testcase):
 
-    parameters = {"host": "https://tools.ietf.org/html/rfc5246"}
-
-    @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
+    parameters = {"host": "https://wiki.archlinux.org/"}
 
     @aetest.test
-    def tls_1_2_handshake_test(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                timeout=30,
-                write_pcap=True,
-            )
-        pcap_file = f"{self.user_device.name}_tshark.pcap"
+    def tls_1_2_handshake_test(self, user, proxy, host):
+
+        with Chrome(
+            grid_server=user,
+            proxy_server=proxy,
+            chrome_arguments=[
+                "--ssl-version-max=tls1.2",
+            ],
+            traffic_dump=True,
+        ) as chrome:
+            chrome.get(host)
+
+        pcap_file = f"{user.name}_tshark.pcap"
         pcap_file = os.path.join(_temp_files_dir, pcap_file)
         pcap_obj = TsharkPcap(pcap_file)
 
@@ -116,23 +103,22 @@ class TLSHandshake12(aetest.Testcase):
 
 class TLSHandshake13(aetest.Testcase):
 
-    parameters = {"host": "https://en.wikipedia.org/wiki/Internet_Protocol"}
-
-    @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
+    parameters = {"host": "https://wiki.archlinux.org/"}
 
     @aetest.test
-    def tls_1_3_handshake_test(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                timeout=30,
-                write_pcap=True,
-            )
-        pcap_file = f"{self.user_device.name}_tshark.pcap"
+    def tls_1_3_handshake_test(self, user, proxy, host):
+
+        with Chrome(
+            grid_server=user,
+            proxy_server=proxy,
+            chrome_arguments=[
+                "--ssl-version-max=tls1.3",
+            ],
+            traffic_dump=True,
+        ) as chrome:
+            chrome.get(host)
+
+        pcap_file = f"{user.name}_tshark.pcap"
         pcap_file = os.path.join(_temp_files_dir, pcap_file)
         pcap_obj = TsharkPcap(pcap_file)
 
@@ -142,9 +128,8 @@ class TLSHandshake13(aetest.Testcase):
 
 class CommonCleanup(aetest.CommonCleanup):
     @aetest.subsection
-    def stop_selenium(self, testbed):
-        user_device = testbed.devices["user-1"]
-        grid = SeleniumGrid(user_device)
+    def stop_selenium(self, user):
+        grid = SeleniumGrid(user)
         grid.stop()
 
 
@@ -156,7 +141,7 @@ if __name__ == "__main__":
     from pyats import topology
 
     logging.getLogger(__name__).setLevel(logging.DEBUG)
-    logging.getLogger("unicon").setLevel(logging.INFO)
+    logging.getLogger("unicon").setLevel(logging.ERROR)
 
     parser = argparse.ArgumentParser(description="standalone parser")
     parser.add_argument("--testbed", dest="testbed", type=topology.loader.load)

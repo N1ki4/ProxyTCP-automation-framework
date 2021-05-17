@@ -5,17 +5,24 @@ from pyats import aetest
 
 from src.classes.remote_tools import SeleniumGrid
 from src.classes.clients import Chrome
-from src.classes.analyse import (
-    BrowserResponseAnalyzer,
-    serializer,
-)
+from src.classes.analyse import BrowserResponseAnalyzer
 
 
 class CommonSetup(aetest.CommonSetup):
     @aetest.subsection
-    def start_selenium(self, testbed):
-        user_device = testbed.devices["user-1"]
-        grid = SeleniumGrid(user_device)
+    def update_testscript_parameters(self, testbed):
+        user_device = testbed.devices["user-2"]
+        proxy_device = testbed.devices["proxy-vm"]
+        self.parent.parameters.update(
+            {
+                "user": user_device,
+                "proxy": proxy_device,
+            }
+        )
+
+    @aetest.subsection
+    def start_selenium(self, user):
+        grid = SeleniumGrid(user)
         grid.start()
 
 
@@ -30,24 +37,17 @@ class HostSupportCloudFlare(aetest.Testcase):
     }
 
     @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
+    def setup_loops(self):
         aetest.loop.mark(self.cloud_flare_test, host=self.parameters["hosts"])
 
     @aetest.test
-    def cloud_flare_test(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                write_pcap=False,
-                timeout=30,
-            )
-            stats = chrome.get_stats("response.json")
-        serialized_stats = serializer(stats)
-        data = BrowserResponseAnalyzer(serialized_stats)
+    def cloud_flare_test(self, proxy, user, host):
+
+        with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+            chrome.get(host)
+            stats = chrome.get_stats()
+
+        data = BrowserResponseAnalyzer(stats)
         status_code = data.get_status_code()
         if status_code != 200:
             self.failed(
@@ -66,24 +66,17 @@ class HostSupportApache(aetest.Testcase):
     }
 
     @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
+    def setup_loops(self):
         aetest.loop.mark(self.apache_test, host=self.parameters["hosts"])
 
     @aetest.test
-    def apache_test(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                write_pcap=False,
-                timeout=30,
-            )
-            stats = chrome.get_stats("response.json")
-        serialized_stats = serializer(stats)
-        data = BrowserResponseAnalyzer(serialized_stats)
+    def apache_test(self, proxy, user, host):
+
+        with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+            chrome.get(host)
+            stats = chrome.get_stats()
+
+        data = BrowserResponseAnalyzer(stats)
         status_code = data.get_status_code()
         if status_code != 200:
             self.failed(
@@ -102,24 +95,17 @@ class HostSupportNginx(aetest.Testcase):
     }
 
     @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
+    def setup_loops(self):
         aetest.loop.mark(self.nginx_test, host=self.parameters["hosts"])
 
     @aetest.test
-    def nginx_test(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                write_pcap=False,
-                timeout=30,
-            )
-            stats = chrome.get_stats("response.json")
-        serialized_stats = serializer(stats)
-        data = BrowserResponseAnalyzer(serialized_stats)
+    def nginx_test(self, proxy, user, host):
+
+        with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+            chrome.get(host)
+            stats = chrome.get_stats()
+
+        data = BrowserResponseAnalyzer(stats)
         status_code = data.get_status_code()
         if status_code != 200:
             self.failed(
@@ -138,24 +124,17 @@ class HostSupportMicrosoftIIS(aetest.Testcase):
     }
 
     @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
+    def setup_loops(self):
         aetest.loop.mark(self.microsoft_iis_test, host=self.parameters["hosts"])
 
     @aetest.test
-    def microsoft_iis_test(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                write_pcap=False,
-                timeout=30,
-            )
-            stats = chrome.get_stats("response.json")
-        serialized_stats = serializer(stats)
-        data = BrowserResponseAnalyzer(serialized_stats)
+    def microsoft_iis_test(self, proxy, user, host):
+
+        with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+            chrome.get(host)
+            stats = chrome.get_stats()
+
+        data = BrowserResponseAnalyzer(stats)
         status_code = data.get_status_code()
         if status_code != 200:
             self.failed(
@@ -168,24 +147,17 @@ class HostSupportGWS(aetest.Testcase):
     parameters = {"hosts": ["https://www.google.com/", "https://golang.google.cn/"]}
 
     @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
+    def setup_loops(self):
         aetest.loop.mark(self.gws_test, host=self.parameters["hosts"])
 
     @aetest.test
-    def gws_test(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                write_pcap=False,
-                timeout=30,
-            )
-            stats = chrome.get_stats("response.json")
-        serialized_stats = serializer(stats)
-        data = BrowserResponseAnalyzer(serialized_stats)
+    def gws_test(self, proxy, user, host):
+
+        with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+            chrome.get(host)
+            stats = chrome.get_stats()
+
+        data = BrowserResponseAnalyzer(stats)
         status_code = data.get_status_code()
         if status_code != 200:
             self.failed(
@@ -203,24 +175,17 @@ class HostSupportAmazon(aetest.Testcase):
     }
 
     @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
+    def setup_loops(self):
         aetest.loop.mark(self.amazon_test, host=self.parameters["hosts"])
 
     @aetest.test
-    def amazon_test(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                write_pcap=False,
-                timeout=30,
-            )
-            stats = chrome.get_stats("response.json")
-        serialized_stats = serializer(stats)
-        data = BrowserResponseAnalyzer(serialized_stats)
+    def amazon_test(self, proxy, user, host):
+
+        with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+            chrome.get(host)
+            stats = chrome.get_stats()
+
+        data = BrowserResponseAnalyzer(stats)
         status_code = data.get_status_code()
         if status_code != 200:
             self.failed(
@@ -230,55 +195,43 @@ class HostSupportAmazon(aetest.Testcase):
 
 class WebsiteResourcesLoading(aetest.Testcase):
     @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
+    def setup_loops(self):
+        aetest.loop.mark(
+            self.count_page_resources,
+            uids=["light_web_page", "medium_web_page", "heavy_web_page"],
+            host=[
+                "https://pypi.org/project/pyats/",
+                "https://docs.docker.com/",
+                "https://www.skype.com/",
+            ],
+        )
 
-    @aetest.test.loop(
-        uids=["light_web_page", "medium_web_page", "heavy_web_page"],
-        host=[
-            "https://pypi.org/project/pyats/",
-            "https://docs.docker.com/",
-            "https://www.skype.com/",
-        ],
-    )
-    def count_page_resources(self, host):
+    def count_page_resources(self, proxy, user, host):
         req_run_result = []
         resp_run_result = []
-        for _ in range(1, 6):
-            with Chrome(self.user_device) as chrome:
-                chrome.open(
-                    host=host,
-                    write_pcap=False,
-                    timeout=30,
-                )
-                stats = chrome.get_stats()
-                serialized_stats = serializer(stats)
-                data = BrowserResponseAnalyzer(serialized_stats)
-                req_run_result.append(
-                    BrowserResponseAnalyzer.get_requests_statistics(data)
-                )
-                resp_run_result.append(
-                    BrowserResponseAnalyzer.get_response_statistics(data)
-                )
 
         for _ in range(1, 6):
-            with Chrome(self.user_device) as chrome:
-                chrome.open(
-                    host=host,
-                    proxy_host=self.proxy_device,
-                    write_pcap=False,
-                    timeout=30,
-                )
+            with Chrome(grid_server=user) as chrome:
+                chrome.get(host)
                 stats = chrome.get_stats()
-                serialized_stats = serializer(stats)
-                data = BrowserResponseAnalyzer(serialized_stats)
-                req_run_result.append(
-                    BrowserResponseAnalyzer.get_requests_statistics(data)
-                )
-                resp_run_result.append(
-                    BrowserResponseAnalyzer.get_response_statistics(data)
-                )
+
+            data = BrowserResponseAnalyzer(stats)
+            req_run_result.append(BrowserResponseAnalyzer.get_requests_statistics(data))
+            resp_run_result.append(
+                BrowserResponseAnalyzer.get_response_statistics(data)
+            )
+
+        for _ in range(1, 6):
+            with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+                chrome.get(host)
+                stats = chrome.get_stats()
+
+            data = BrowserResponseAnalyzer(stats)
+            req_run_result.append(BrowserResponseAnalyzer.get_requests_statistics(data))
+            resp_run_result.append(
+                BrowserResponseAnalyzer.get_response_statistics(data)
+            )
+
         disabled_proxy_requests_slice = req_run_result[: int(len(req_run_result) / 2)]
         enable_proxy_requests_slice = req_run_result[int(len(req_run_result) / 2) :]
 
@@ -310,107 +263,107 @@ class SuperLightWebpageResourceLoading(aetest.Testcase):
     parameters = {"host": "https://wiki.archlinux.org"}
 
     @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
+    def setup_loops(self):
+        aetest.loop.mark(
+            self.compare_page_resources,
+            uids=[
+                "first_run",
+                "second_run",
+                "third_run",
+                "fourth_run",
+                "fifth_run",
+                "sixth_run",
+                "seventh_run",
+                "eighth_run",
+                "ninth_run",
+                "tenth_run",
+            ],
+        )
 
-    @aetest.test.loop(
-        uids=[
-            "first_run",
-            "second_run",
-            "third_run",
-            "fourth_run",
-            "fifth_run",
-            "sixth_run",
-            "seventh_run",
-            "eighth_run",
-            "ninth_run",
-            "tenth_run",
-        ]
-    )
-    def compare_page_resources(self, host):
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                write_pcap=False,
-                timeout=30,
-            )
+    def compare_page_resources(self, proxy, user, host):
 
+        with Chrome(grid_server=user) as chrome:
+            chrome.get(host)
             stats = chrome.get_stats()
-            serialized_stats = serializer(stats)
-            data = BrowserResponseAnalyzer(serialized_stats)
-            requests = BrowserResponseAnalyzer.get_requests_statistics(data)
-            responses = BrowserResponseAnalyzer.get_response_statistics(data)
-            failed = BrowserResponseAnalyzer.get_loading_failed_statistics(data)
 
-        with Chrome(self.user_device) as chrome:
-            chrome.open(
-                host=host,
-                proxy_host=self.proxy_device,
-                write_pcap=False,
-                timeout=30,
-            )
+        data = BrowserResponseAnalyzer(stats)
+        requests = BrowserResponseAnalyzer.get_requests_statistics(data)
+        responses = BrowserResponseAnalyzer.get_response_statistics(data)
+        failed = BrowserResponseAnalyzer.get_loading_failed_statistics(data)
 
+        with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+            chrome.get(host)
             stats = chrome.get_stats()
-            serialized_stats = serializer(stats)
-            data = BrowserResponseAnalyzer(serialized_stats)
-            proxy_requests = BrowserResponseAnalyzer.get_requests_statistics(data)
-            proxy_responses = BrowserResponseAnalyzer.get_response_statistics(data)
-            proxy_failed = BrowserResponseAnalyzer.get_loading_failed_statistics(data)
 
-            if not (
-                (requests, responses, failed)
-                == (proxy_requests, proxy_responses, proxy_failed)
-                or (requests, responses + 1, failed)
-                == (proxy_requests, proxy_responses, proxy_failed)
-                or (requests, responses, failed)
-                == (proxy_requests, proxy_responses + 1, proxy_failed)
-            ):
-                self.failed("Too many resources were lost!")
+        data = BrowserResponseAnalyzer(stats)
+        proxy_requests = BrowserResponseAnalyzer.get_requests_statistics(data)
+        proxy_responses = BrowserResponseAnalyzer.get_response_statistics(data)
+        proxy_failed = BrowserResponseAnalyzer.get_loading_failed_statistics(data)
+
+        pass_condition_1 = (
+            requests,
+            responses,
+            failed == proxy_requests,
+            proxy_responses,
+            proxy_failed,
+        )
+        pass_condition_2 = (
+            requests,
+            responses + 1,
+            failed == proxy_requests,
+            proxy_responses,
+            proxy_failed,
+        )
+        pass_condition_3 = (
+            requests,
+            responses,
+            failed == proxy_requests,
+            proxy_responses + 1,
+            proxy_failed,
+        )
+        if not (pass_condition_1 or pass_condition_2 or pass_condition_3):
+            self.failed("Too many resources were lost!")
 
 
-class LoadingTimeSuperLight(aetest.Testcase):
+class LoadingTime(aetest.Testcase):
 
     parameters = {
-        "host": "https://wiki.archlinux.org/",
         "delay_rate": 2,
         "runs": 10,
         "fails": 2,
     }
 
     @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
+    def setup_loops(self):
+        aetest.loop.mark(
+            self.loading_time_test,
+            uids=["superlight_page", "light_page", "medium_page", "heavy_page"],
+            host=[
+                "https://wiki.archlinux.org/",
+                "https://docs.docker.com/",
+                "https://glossary.istqb.org/app/en/search/",
+                "https://www.skype.com",
+            ],
+        )
 
     @aetest.test
-    def loading_time_test(self, steps, host, delay_rate, runs, fails):
+    def loading_time_test(self, steps, proxy, user, host, delay_rate, runs, fails):
+
         time_proxy_off = []
         with steps.start("Collecting statistics with proxy off"):
             for _ in range(runs):
-                with Chrome(self.user_device) as chrome:
-                    chrome.open(
-                        host=host,
-                        timeout=30,
-                        write_pcap=False,
-                    )
-                    stats = chrome._get_page_loading_time()
-                    print(stats)
-                    time_proxy_off.append(stats)
+                with Chrome(grid_server=user) as chrome:
+                    chrome.get(host)
+                    time = chrome._get_page_loading_time()
+                time_proxy_off.append(time)
 
         time_proxy_on = []
         with steps.start("Collecting statistics with proxy on"):
             for _ in range(runs):
-                with Chrome(self.user_device) as chrome:
-                    chrome.open(
-                        host=host,
-                        proxy_host=self.proxy_device,
-                        timeout=30,
-                        write_pcap=False,
-                    )
-                    stats = chrome._get_page_loading_time()
-                    print(stats)
-                    time_proxy_on.append(stats)
+                with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+                    chrome.get(host)
+                    time = chrome._get_page_loading_time()
+                time_proxy_off.append(time)
 
         with steps.start("Comparing results"):
             overtime_entries = list(
@@ -423,189 +376,15 @@ class LoadingTimeSuperLight(aetest.Testcase):
                 self.failed(
                     f"{len(overtime_entries)} out of {runs} times page loading"
                     " time with proxy on exceeded normal loading time for more than"
-                    f" {delay_rate} times"
-                )
-
-
-class LoadingTimeLight(aetest.Testcase):
-
-    parameters = {
-        "host": "https://docs.docker.com/",
-        "delay_rate": 2,
-        "runs": 10,
-        "fails": 2,
-    }
-
-    @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
-    @aetest.test
-    def loading_time_test(self, steps, host, delay_rate, runs, fails):
-        time_proxy_off = []
-        with steps.start("Collecting statistics with proxy off"):
-            for _ in range(runs):
-                with Chrome(self.user_device) as chrome:
-                    chrome.open(
-                        host=host,
-                        timeout=30,
-                        write_pcap=False,
-                    )
-                    stats = chrome._get_page_loading_time()
-                    print(stats)
-                    time_proxy_off.append(stats)
-
-        time_proxy_on = []
-        with steps.start("Collecting statistics with proxy on"):
-            for _ in range(runs):
-                with Chrome(self.user_device) as chrome:
-                    chrome.open(
-                        host=host,
-                        proxy_host=self.proxy_device,
-                        timeout=30,
-                        write_pcap=False,
-                    )
-                    stats = chrome._get_page_loading_time()
-                    print(stats)
-                    time_proxy_on.append(stats)
-
-        with steps.start("Comparing results"):
-            overtime_entries = list(
-                filter(
-                    lambda r: r > delay_rate,
-                    map(lambda x, y: y / x, time_proxy_off, time_proxy_on),
-                )
-            )
-            if len(overtime_entries) > fails:
-                self.failed(
-                    f"{len(overtime_entries)} out of {runs} times page loading"
-                    " time with proxy on exceeded normal loading time for more than"
-                    f" {delay_rate} times"
-                )
-
-
-class LoadingTimeMedium(aetest.Testcase):
-
-    parameters = {
-        "host": "https://glossary.istqb.org/app/en/search/",
-        "delay_rate": 2,
-        "runs": 10,
-        "fails": 2,
-    }
-
-    @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
-    @aetest.test
-    def loading_time_test(self, steps, host, delay_rate, runs, fails):
-        time_proxy_off = []
-        with steps.start("Collecting statistics with proxy off"):
-            for _ in range(runs):
-                with Chrome(self.user_device) as chrome:
-                    chrome.open(
-                        host=host,
-                        timeout=30,
-                        write_pcap=False,
-                    )
-                    stats = chrome._get_page_loading_time()
-                    print(stats)
-                    time_proxy_off.append(stats)
-
-        time_proxy_on = []
-        with steps.start("Collecting statistics with proxy on"):
-            for _ in range(runs):
-                with Chrome(self.user_device) as chrome:
-                    chrome.open(
-                        host=host,
-                        proxy_host=self.proxy_device,
-                        timeout=30,
-                        write_pcap=False,
-                    )
-                    stats = chrome._get_page_loading_time()
-                    print(stats)
-                    time_proxy_on.append(stats)
-
-        with steps.start("Comparing results"):
-            overtime_entries = list(
-                filter(
-                    lambda r: r > delay_rate,
-                    map(lambda x, y: y / x, time_proxy_off, time_proxy_on),
-                )
-            )
-            if len(overtime_entries) > fails:
-                self.failed(
-                    f"{len(overtime_entries)} out of {runs} times page loading"
-                    " time with proxy on exceeded normal loading time for more than"
-                    f" {delay_rate} times"
-                )
-
-
-class LoadingTimeHeavy(aetest.Testcase):
-
-    parameters = {
-        "host": "https://www.skype.com",
-        "delay_rate": 2,
-        "runs": 10,
-        "fails": 2,
-    }
-
-    @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-1"]
-
-    @aetest.test
-    def loading_time_test(self, steps, host, delay_rate, runs, fails):
-        time_proxy_off = []
-        with steps.start("Collecting statistics with proxy off"):
-            for _ in range(runs):
-                with Chrome(self.user_device) as chrome:
-                    chrome.open(
-                        host=host,
-                        timeout=30,
-                        write_pcap=False,
-                    )
-                    stats = chrome._get_page_loading_time()
-                    print(stats)
-                    time_proxy_off.append(stats)
-
-        time_proxy_on = []
-        with steps.start("Collecting statistics with proxy on"):
-            for _ in range(runs):
-                with Chrome(self.user_device) as chrome:
-                    chrome.open(
-                        host=host,
-                        proxy_host=self.proxy_device,
-                        timeout=30,
-                        write_pcap=False,
-                    )
-                    stats = chrome._get_page_loading_time()
-                    print(stats)
-                    time_proxy_on.append(stats)
-
-        with steps.start("Comparing results"):
-            overtime_entries = list(
-                filter(
-                    lambda r: r > delay_rate,
-                    map(lambda x, y: y / x, time_proxy_off, time_proxy_on),
-                )
-            )
-            if len(overtime_entries) > fails:
-                self.failed(
-                    f"{len(overtime_entries)} out of {runs} times page loading"
-                    " time with proxy on exceeded normal loading time for more than"
-                    f" {delay_rate} times"
+                    f" {delay_rate} times",
+                    goto=["next_tc"],
                 )
 
 
 class CommonCleanup(aetest.CommonCleanup):
     @aetest.subsection
-    def stop_selenium(self, testbed):
-        user_device = testbed.devices["user-1"]
-        grid = SeleniumGrid(user_device)
+    def stop_selenium(self, user):
+        grid = SeleniumGrid(user)
         grid.stop()
 
 

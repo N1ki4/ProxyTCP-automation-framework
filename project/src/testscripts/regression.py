@@ -10,9 +10,19 @@ from src.classes.clients import Chrome
 
 class CommonSetup(aetest.CommonSetup):
     @aetest.subsection
-    def start_selenium(self, testbed):
+    def update_testscript_parameters(self, testbed):
         user_device = testbed.devices["user-2"]
-        grid = SeleniumGrid(user_device)
+        proxy_device = testbed.devices["proxy-vm"]
+        self.parent.parameters.update(
+            {
+                "user": user_device,
+                "proxy": proxy_device,
+            }
+        )
+
+    @aetest.subsection
+    def start_selenium(self, user):
+        grid = SeleniumGrid(user)
         grid.start()
 
 
@@ -21,32 +31,28 @@ class ProxyShutAfterCacheCleaning(aetest.Testcase):
     parameters = {"host": "https://docs.docker.com/", "cleanings": 5}
 
     @aetest.setup
-    def setup(self, testbed):
-        self.proxy_device = testbed.devices["proxy-vm"]
-        self.user_device = testbed.devices["user-2"]
-
-        self.proxy_connection = Proxy(self.proxy_device)
+    def setup(self, proxy):
+        self.proxy_connection = Proxy(proxy)
         self.proxy_connection.start()
 
     @aetest.test
-    def test_cache_cleaning(self, host, cleanings):
+    def test_cache_cleaning(self, user, host, cleanings):
+
         for i in range(1, cleanings + 1):
-            with Chrome(device=self.user_device, single_session_proxy=False) as chrome:
-                chrome.open(
-                    host=host,
-                    proxy_host=self.proxy_device,
-                    timeout=30,
-                    write_pcap=False,
-                )
+            with Chrome(grid_server=user, session_wide_proxy=False) as chrome:
+                chrome.get(host)
             if not self.proxy_connection.is_alive():
                 self.failed(f"Proxy server shuted down after session `{i}`")
+
+    @aetest.cleanup
+    def cleanup(self):
+        self.proxy_connection.stop()
 
 
 class CommonCleanup(aetest.CommonCleanup):
     @aetest.subsection
-    def stop_selenium(self, testbed):
-        user_device = testbed.devices["user-2"]
-        grid = SeleniumGrid(user_device)
+    def stop_selenium(self, user):
+        grid = SeleniumGrid(user)
         grid.stop()
 
 

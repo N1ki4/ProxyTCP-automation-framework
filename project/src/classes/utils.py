@@ -94,61 +94,54 @@ class TShark:
             self._device.tshark.execute(command + "&& echo -ne '\n'")
 
 
-class TrafficCaptureConnection:
+class TrafficDump:
     """Connection for traffic monitoring.
 
     If no proxy is specified only one connection is established - to traffic source (user_endpoint)
     If proxy is specified two connections are established - to tarffic source and to the proxy host
     """
 
-    def __init__(self, user_endpoint: Device, proxy_host: Device = None):
-        # main device
-        self._user = user_endpoint
-        # fileutils for pcap transfer
-        self._user_fileutils = FileUtils(user_endpoint)
-        # tshark instance
-        self._user_tshark = None
+    def __init__(self, grid_server: Device, proxy_server: Device = None):
 
-        # proxy device
-        self._proxy = proxy_host
-        # fileutils for pcap transfer
-        self._proxy_fileutils = FileUtils(proxy_host) if proxy_host else None
-        # tshark instance
-        self._proxy_tshark = None
+        self._grid_server = grid_server
+        self._proxy_server = proxy_server
+
+        self._grid_server.connect(alias="tshark")
+        self._grid_server_dump = TShark(grid_server)
+        self._grid_server_fileutils = FileUtils(grid_server)
+
+        self._proxy_server_dump = None
+        self._proxy_server_fileutils = None
+        if self._proxy_server:
+            self._proxy_server.connect(alias="tshark")
+            self._proxy_server_dump = TShark(proxy_server)
+            self._proxy_server_fileutils = FileUtils(proxy_server)
 
     def start_capturing(self, filters: str = None) -> None:
         # if proxy specified reconfigure filters
-        if self._proxy:
+        if self._proxy_server:
             proxy_filters = filters
-            user_filters = (
-                "host "
-                f"{self._proxy.interfaces[self._proxy_tshark._interface].ipv4.ip.compressed}"
-            )
+            ifs = self._proxy_server_dump._interface
+            ip = self._proxy_server.interfaces[ifs].ipv4.ip.compressed
+            user_filters = f"host {ip}"
 
             # start capturing
-            self._proxy_tshark.start(filters=proxy_filters)
-            self._user_tshark.start(filters=user_filters)
+            self._proxy_server_dump.start(filters=proxy_filters)
+            self._grid_server_dump.start(filters=user_filters)
         else:
             # start capturing
-            self._user_tshark.start(filters=filters)
+            self._grid_server_dump.start(filters=filters)
 
-    def __enter__(self):
-        # connect to devices and instantiate tshark
-        self._user.connect(alias="tshark")
-        self._user_tshark = TShark(self._user)
+    def stop_capturing(self) -> None:
+        if self._proxy_server:
+            self._proxy_server_dump.stop()
+            self._proxy_server.tshark.disconnect()
+            self._proxy_server_fileutils.copy_from_device(
+                source=self._proxy_server_dump._capfile
+            )
 
-        if self._proxy:
-            self._proxy.connect(alias="tshark")
-            self._proxy_tshark = TShark(self._proxy)
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        # disconnect from devices and copy pcap files
-        if self._proxy:
-            self._proxy_tshark.stop()
-            self._proxy.tshark.disconnect()
-            self._proxy_fileutils.copy_from_device(source=self._proxy_tshark._capfile)
-
-        self._user_tshark.stop()
-        self._user.tshark.disconnect()
-        self._user_fileutils.copy_from_device(source=self._user_tshark._capfile)
+        self._grid_server_dump.stop()
+        self._grid_server.tshark.disconnect()
+        self._grid_server_fileutils.copy_from_device(
+            source=self._grid_server_dump._capfile
+        )

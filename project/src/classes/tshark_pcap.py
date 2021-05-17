@@ -77,7 +77,7 @@ class TsharkPcap(pyshark.FileCapture):
         """Creates list with lists of packets grouped by tcp stream."""
 
         # find tls1.2 handshake packets
-        if packet_type.lower() == "tls1.2" or "tls1.3":
+        if packet_type.lower() in ("tls1.2", "tls1.3"):
             template = (
                 self._tls1_2_handshake_tmplate
                 if packet_type.lower() == "tls1.2"
@@ -162,3 +162,7 @@ class TsharkPcap(pyshark.FileCapture):
                     }
                     break
             return pass_condition, content
+
+
+if __name__ == "__main__":
+    pcap_obj = TsharkPcap("../temp/user-2_tshark.pcap")

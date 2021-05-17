@@ -11,7 +11,6 @@ class Proxy:
             self._device.proxy.execute(
                 "./proxytcp/bin/proxytcp --mode default --port 1080 &"
             )
-            self._device.proxy.execute("echo -ne '\n'")
 
     def is_alive(self):
         self._device.proxy.execute("echo -ne '\n'")
