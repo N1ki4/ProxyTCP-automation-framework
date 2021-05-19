@@ -274,13 +274,13 @@ class ChromeAsync(ChromeBase):
         self._drivers = []
 
         # initialize drivers
-        driver = webdriver.Remote(
-            command_executor=self._grid, options=self._chromeoptions
-        )
-        if isinstance(self._session_timeout, int):
-            driver.implicitly_wait(self._session_timeout)
-        if isinstance(max_num_of_instances, int):
-            self._drivers = [driver] * max_num_of_instances
+        for _ in range(max_num_of_instances):
+            driver = webdriver.Remote(
+                command_executor=self._grid, options=self._chromeoptions
+            )
+            if isinstance(self._session_timeout, int):
+                driver.implicitly_wait(self._session_timeout)
+            self._drivers.append(driver)
 
     def get(self, hosts: list):
         """Get.
@@ -297,7 +297,8 @@ class ChromeAsync(ChromeBase):
 
     def make_screenshots(self, name: str) -> None:
         for index, driver in enumerate(self._drivers):
-            driver.save_screenshot(f"{name}_{index}.png")
+            if driver.session_id is not None:
+                driver.save_screenshot(f"{name}_{index}.png")
 
     def get_stats(self, write_to_file: str = None) -> list:
         """Get results for post analyzis."""

@@ -1,10 +1,14 @@
 # pylint: disable=no-self-use # pyATS-related exclusion
 # pylint: disable=attribute-defined-outside-init # pyATS-related exclusion
+import statistics
+
+
 from pyats import aetest
 
 
 from src.classes.remote_tools import SeleniumGrid
-from src.classes.clients import Chrome
+from src.classes.clients import Chrome, ChromeAsync
+from src.classes.page_objects import AuthPage, PageForNavigation
 from src.classes.analyse import BrowserResponseAnalyzer
 
 
@@ -325,6 +329,62 @@ class SuperLightWebpageResourceLoading(aetest.Testcase):
             self.failed("Too many resources were lost!")
 
 
+class ReloadingLightWebpage(aetest.Testcase):
+
+    parameters = {"runs": 3, "host": "https://docs.docker.com/", "pass_rate": 0.95}
+
+    @aetest.test
+    def test_reloading(self, steps, proxy, user, runs, host, pass_rate):
+
+        direct = None
+        with steps.start("Reloading: colecting stats with proxy off"):
+            with Chrome(grid_server=user) as chrome:
+                chrome.get(host)
+                for _ in range(runs):
+                    chrome.refresh()
+                stats = chrome.get_stats()
+            data = BrowserResponseAnalyzer(stats)
+            direct = (data.get_requests_statistics(), data.get_response_statistics())
+
+        proxyied = None
+        with steps.start("Reloading: colecting stats with proxy on"):
+            with Chrome(grid_server=user, proxy_server=proxy) as chrome:
+                chrome.get(host)
+                for _ in range(runs):
+                    chrome.refresh()
+                stats = chrome.get_stats()
+            data = BrowserResponseAnalyzer(stats)
+            proxyied = (data.get_requests_statistics(), data.get_response_statistics())
+
+        with steps.start("Anylizing results"):
+
+            if proxyied == (0, 0):
+                self.aborted("Proxy server connection lost during the session")
+
+            rate_req = proxyied[0] / direct[0]
+            rate_rsp = proxyied[1] / direct[1]
+            pass_condition = rate_req >= pass_rate and rate_rsp >= pass_rate
+            if not pass_condition:
+                self.failed("Too many resources were lost while second reloading!")
+
+
+class ChainNavigation(aetest.Testcase):
+
+    parameters = {
+        "xpaths": ['//*[@id="ca-history"]/a', '//*[@id="mw-content-text"]/div/p/a']
+    }
+
+    @aetest.test
+    def test_navigation(self, proxy, user, xpaths):
+
+        with PageForNavigation(grid_server=user, proxy_server=proxy) as page:
+            page.get()
+            for xpath in xpaths:
+                page.locate_element_by_xpath_and_click(xpath)
+                if not page.is_document_ready():
+                    self.failed("Document is not ready on first navigating!")
+
+
 class LoadingTime(aetest.Testcase):
 
     parameters = {
@@ -379,6 +439,123 @@ class LoadingTime(aetest.Testcase):
                     f" {delay_rate} times",
                     goto=["next_tc"],
                 )
+
+
+class AuthenticationOAUTH(aetest.Testcase):
+
+    parameters = {
+        "email": "junkmail.dp.ua@gmail.com",
+        "services_pass": "OtcVs114aqE",
+        "mailbox_pass": "OtcVs114aqQ",
+    }
+
+    @aetest.test
+    def test_login(self, proxy, user, email, services_pass, mailbox_pass):
+
+        with AuthPage(grid_server=user, proxy_server=proxy) as page:
+            page.get()
+            page.oauth_login(
+                mail=email, password=services_pass, box_password=mailbox_pass
+            )
+            result = page.check_auth()
+
+        if result is False:
+            self.failed("Login failed")
+
+
+class AuthenticationPassword(aetest.Testcase):
+
+    parameters = {"email": "junkmail.dp.ua@gmail.com", "services_pass": "OtcVs114aqE"}
+
+    @aetest.test
+    def test_login(self, proxy, user, email, services_pass):
+
+        with AuthPage(grid_server=user, proxy_server=proxy) as page:
+            page.get()
+            page.login(
+                mail=email,
+                password=services_pass,
+            )
+            result = page.check_auth()
+
+        if result is False:
+            self.failed("Login failed")
+
+
+class MultipleTabsLoading(aetest.Testcase):
+
+    parameters = {
+        "runs": 5,
+        "hosts": [
+            "https://dev.mysql.com/doc/refman/8.0/en/",
+            "https://tools.ietf.org/",
+            "https://docs.docker.com/",
+        ],
+        "pass_rate": 0.85,
+    }
+
+    @aetest.test
+    def test_multitab_loading(self, steps, proxy, user, runs, hosts, pass_rate):
+
+        direct = []
+        with steps.start("Loading multiple tabs: colecting stats with proxy off"):
+            for _ in range(runs):
+                with ChromeAsync(grid_server=user) as chrome:
+                    chrome.get(hosts)
+                    stats = chrome.get_stats()
+
+                data = (BrowserResponseAnalyzer(stat) for stat in stats)
+                direct.append(
+                    [
+                        (resp.get_requests_statistics(), resp.get_response_statistics())
+                        for resp in data
+                    ]
+                )
+
+        proxyied = []
+        with steps.start("Loading multiple tabs: colecting stats with proxy on"):
+            for _ in range(runs):
+                with ChromeAsync(grid_server=user, proxy_server=proxy) as chrome:
+                    chrome.get(hosts)
+                    stats = chrome.get_stats()
+
+                data = (BrowserResponseAnalyzer(stat) for stat in stats)
+                proxyied.append(
+                    [
+                        (resp.get_requests_statistics(), resp.get_response_statistics())
+                        for resp in data
+                    ]
+                )
+
+        with steps.start("Anylizing results"):
+
+            direct_stats = []
+            for entry in zip(*direct):
+                mean_req = statistics.mean(stat[0] for stat in entry)
+                mean_rsp = statistics.mean(stat[1] for stat in entry)
+                direct_stats.append((mean_req, mean_rsp))
+
+            proxyied_stats = []
+            for entry in zip(*proxyied):
+                mean_req = statistics.mean(stat[0] for stat in entry)
+                mean_rsp = statistics.mean(stat[1] for stat in entry)
+                proxyied_stats.append((mean_req, mean_rsp))
+
+            rates_req = [
+                tup1[0] / tup2[0]
+                for tup1, tup2 in zip(proxyied_stats, direct_stats)
+                if tup2[0] != 0
+            ]
+            rates_rsp = [
+                tup1[1] / tup2[1]
+                for tup1, tup2 in zip(proxyied_stats, direct_stats)
+                if tup2[1] != 0
+            ]
+            pass_condition = all(rate >= pass_rate for rate in rates_req) and all(
+                rate >= pass_rate for rate in rates_rsp
+            )
+            if not pass_condition:
+                self.failed("To many resources were lost")
 
 
 class CommonCleanup(aetest.CommonCleanup):
