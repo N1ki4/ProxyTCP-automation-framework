@@ -1,0 +1,54 @@
+testcases:
+
+  WebPageOpensInChrome:
+    name: 
+      Web page opens in Google Chrome
+    description: 
+      Verify web page opens successfully with enabled proxy. 
+      Return Response Status Code 200.
+    parameters:
+      host: https://wiki.archlinux.org/
+  
+  RemoteIPBelongsToProxy:
+    name: 
+      Remote address corresponds to the proxy server's IP address
+    description:
+      Verify web page remote address changes with proxy enabled.
+    parameters:
+      host: https://wiki.archlinux.org/
+  
+  ProxyDoesNotAlterPorts:
+    name: 
+      Proxy does not alter tcp port number specified in request 
+    description:
+      Examine how web page works with explicitly specified ports.
+    parameters:
+      no_error: 
+        - https://tools.ietf.org
+        - https://tools.ietf.org:443
+      ssl_error:
+        - https://tools.ietf.org:80
+      connection_error:
+        - https://tools.ietf.org:20222
+        - https://tools.ietf.org:65535
+    
+  InvalidProxyHost:
+    name:
+      Connection fails when the incorrect proxy server was selected
+    description:
+      Check that connections fails when the browser proxy is 
+      configured with wrong proxy server IP address.
+    parameters:
+      host: https://wiki.archlinux.org/
+      proxy_ip: "10.1.1.1"
+  
+  InvalidProxyPort:
+    name:
+      Connection fails when the proxy tcp port selected is other than 1080 
+    description:
+      Check that connections fails when the browser proxy is configured 
+      with wrong proxy server tcp port.
+    parameters:
+      host: https://wiki.archlinux.org/
+      proxy_ip: "8010"
+

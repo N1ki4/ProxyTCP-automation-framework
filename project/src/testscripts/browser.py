@@ -198,16 +198,22 @@ class HostSupportAmazon(aetest.Testcase):
 
 
 class WebsiteResourcesLoading(aetest.Testcase):
+
+    parameters = {
+        "sections_uids": ["light_web_page", "medium_web_page", "heavy_web_page"],
+        "hosts": [
+            "https://pypi.org/project/pyats/",
+            "https://docs.docker.com/",
+            "https://www.skype.com/",
+        ],
+    }
+
     @aetest.setup
     def setup_loops(self):
         aetest.loop.mark(
             self.count_page_resources,
-            uids=["light_web_page", "medium_web_page", "heavy_web_page"],
-            host=[
-                "https://pypi.org/project/pyats/",
-                "https://docs.docker.com/",
-                "https://www.skype.com/",
-            ],
+            uids=self.parameters["sections_uids"],
+            host=self.parameters["hosts"],
         )
 
     def count_page_resources(self, proxy, user, host):
@@ -264,24 +270,26 @@ class WebsiteResourcesLoading(aetest.Testcase):
 
 class SuperLightWebpageResourceLoading(aetest.Testcase):
 
-    parameters = {"host": "https://wiki.archlinux.org"}
+    parameters = {
+        "sections_uids": [
+            "first_run",
+            "second_run",
+            "third_run",
+            "fourth_run",
+            "fifth_run",
+            "sixth_run",
+            "seventh_run",
+            "eighth_run",
+            "ninth_run",
+            "tenth_run",
+        ],
+        "host": "https://wiki.archlinux.org",
+    }
 
     @aetest.setup
     def setup_loops(self):
         aetest.loop.mark(
-            self.compare_page_resources,
-            uids=[
-                "first_run",
-                "second_run",
-                "third_run",
-                "fourth_run",
-                "fifth_run",
-                "sixth_run",
-                "seventh_run",
-                "eighth_run",
-                "ninth_run",
-                "tenth_run",
-            ],
+            self.compare_page_resources, uids=self.parameters["sections_uids"]
         )
 
     def compare_page_resources(self, proxy, user, host):
@@ -388,6 +396,13 @@ class ChainNavigation(aetest.Testcase):
 class LoadingTime(aetest.Testcase):
 
     parameters = {
+        "sections_uids": ["superlight_page", "light_page", "medium_page", "heavy_page"],
+        "hosts": [
+            "https://wiki.archlinux.org/",
+            "https://docs.docker.com/",
+            "https://glossary.istqb.org/app/en/search/",
+            "https://www.skype.com",
+        ],
         "delay_rate": 2,
         "runs": 10,
         "fails": 2,
@@ -397,13 +412,8 @@ class LoadingTime(aetest.Testcase):
     def setup_loops(self):
         aetest.loop.mark(
             self.loading_time_test,
-            uids=["superlight_page", "light_page", "medium_page", "heavy_page"],
-            host=[
-                "https://wiki.archlinux.org/",
-                "https://docs.docker.com/",
-                "https://glossary.istqb.org/app/en/search/",
-                "https://www.skype.com",
-            ],
+            uids=self.parameters["sections_uids"],
+            host=self.parameters["hosts"],
         )
 
     @aetest.test

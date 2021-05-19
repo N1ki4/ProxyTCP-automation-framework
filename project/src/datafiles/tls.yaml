@@ -1,0 +1,45 @@
+testcases:
+
+  BrockenCerts:
+    name:
+      TLS Certificate is not trusted (Negative) 
+    description:
+      Verify proxy does not change default browser behavior when requesting page
+      with broken ssl certificate. Browser can show certificate authority invalid 
+      error or just show warning on the left to the url. 
+    parameters:
+      host: https://www.grupoemsa.org/
+  
+  ObsoleteTLS:
+    name:
+      TLS 1.0 and TLS 1.1 version web pages (Negative) 
+    description:
+      Verify Browser shows “Not Secure” warning when opening TLS 1.0 and TLS 1.1 
+      version web pages. Browser may not load page and show "Your connection is not 
+      fully secure" or just show warning icon near url. TLS 1.0 and TLS 1.1 are 
+      deprecated. You can skip warning and visit the site, but your connection will 
+      be insecure and not encrypted.
+    parameters:
+      host: https://receipt1.seiko-cybertime.jp
+  
+  TLSHandshake12:
+    name:
+      TLS 1.2 Handshake is successfull
+    description:
+      Verify proxy works with TLS 1.2 version. Inspect every step of the TLS 
+      connection like handshakes and negotiation of the session. Make sure to use 
+      website which uses TLS version 1.2 as test data.
+    parameters:
+      host: https://wiki.archlinux.org/
+  
+  TLSHandshake13:
+    name:
+      TLS 1.2 Handshake is successfull
+    description:
+      Verify proxy works with TLS 1.3 version. Inspect every step of the TLS 
+      connection like handshakes and negotiation of the session. Make sure to use 
+      website which uses TLS version 1.3 as test data.
+    parameters:
+      host: https://wiki.archlinux.org/
+  
+  

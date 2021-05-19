@@ -1,0 +1,194 @@
+testcases:
+
+  HostSupportCloudFlare:
+    name:
+      Proxy is able to connect to the webserver hosted on Cloudflare 
+    description:
+      Check if web resources hosted on Cloudflare are accessible through the proxy 
+      when using browser. Run test on 3 websites hosted on Cloudflare to make sure 
+      that proxy behavior is identical for all cases. 
+    parameters:
+      hosts:
+        - https://unpkg.com/
+        - https://www.allaboutcookies.org/
+        - https://forums.wxwidgets.org/
+  
+  HostSupportApache:
+    name:
+      Proxy is able to connect to the webserver hosted on Apache 
+    description:
+      Check if web resources hosted on Apache are accessible through the proxy when 
+      using browser. Run test on 3 websites hosted on Apache to make sure that proxy 
+      behavior is identical for all cases.
+    parameters:
+      hosts:
+        - https://tools.ietf.org/html/rfc1928
+        - https://w3techs.com/technologies/details/ws-apache
+        - https://dev.mysql.com/doc/refman/8.0/en/
+  
+  HostSupportNginx:
+    name:
+      Proxy is able to connect to the webserver hosted on Nginx 
+    description:
+      Check if web resources hosted on Nginx are accessible through the proxy when using 
+      browser. Run test on 3 websites hosted on Nginx to make sure that proxy behavior 
+      is identical for all cases. 
+    parameters:
+      hosts:
+        - https://pypi.org/project/pyats/
+        - https://wiki.archlinux.org/
+        - https://glossary.istqb.org/app/en/search/
+    
+  HostSupportMicrosoftIIS:
+    name:
+      Proxy is able to connect to the webserver hosted on Microsoft-IIS
+    description:
+      Check if web resources hosted on Microsoft-IIS are accessible through the proxy when 
+      using browser. Run test on 3 websites hosted on Microsoft-IIS to make sure that proxy 
+      behavior is identical for all cases.
+    parameters:
+      hosts:
+        - https://www.skype.com/en/about/
+        - https://stackexchange.com/
+        - https://stackoverflow.com/questions/9436534/ajax-tutorial-for-post-and-get
+
+  HostSupportGWS:
+    name:
+      Proxy is able to connect to the webserver hosted on GWS
+    description:
+      Check if web resources hosted on GWS are accessible through the proxy when using 
+      browser. Run test on 2 websites hosted on GWS to make sure that proxy behavior is 
+      identical for all cases. 
+    parameters:
+      hosts:
+        - https://www.google.com/
+        - https://golang.google.cn/
+
+  HostSupportAmazon:
+    name:
+      Proxy is able to connect to the webserver hosted on AmazonS3 
+    description:
+      Check if web resources hosted on AmazonS3 are accessible through the proxy when 
+      using browser. Run test on 2 websites hosted on AmazonS3 to make sure that proxy 
+      behavior is identical for all cases. 
+    parameters:
+      hosts:
+        - https://developer.mozilla.org/uk/docs/Learn/Server-side/Django
+        - https://docs.docker.com/
+  
+  WebsiteResourcesLoading:
+    name:
+      Website resources loading on first open
+    description:
+      Load webpage with proxying disabled and enabled and compare the number of failed 
+      requests for both cases. The goal of this test case is to verify that proxy server 
+      does not cause any data loss when page is loaded.
+    parameters:
+      sections_uids:
+        - light_web_page
+        - medium_web_page
+        - heavy_web_page
+      hosts:
+        - https://pypi.org/project/pyats/
+        - https://docs.docker.com/
+        - https://www.skype.com/
+  
+  SuperLightWebpageResourceLoading:
+    name:
+      Website resources loading on first open of the super-light web page
+    description:
+      Load webpage with proxying disabled and enabled and compare the number of failed 
+      requests for both cases. The goal of this test case is to verify that proxy server 
+      does not cause any data loss when page is loaded.
+    parameters:
+      sections_uids:
+        - first_run
+        - second_run
+        - third_run
+        - fourth_run
+        - fifth_run
+        - sixth_run
+        - seventh_run
+        - eighth_run
+        - ninth_run
+        - tenth_run
+      host: https://wiki.archlinux.org
+  
+  ReloadingLightWebpage:
+    name:
+      Light web page can be successfully reloaded multiple times 
+    description:
+      Reload web page multiple times with proxying enabled. The goal of this test case 
+      is to check the sustainability of the proxy server.
+    parameters:
+      host: https://docs.docker.com/
+      runs: 3
+      pass_rate: 0.95
+  
+  ChainNavigation:
+    name:
+      Website resources loads while navigating
+    description:
+      Verify website resources loads while navigating between pages (on the same domain). 
+      All "a" tag href`s works correctly. 
+    parameters:
+      xpaths:
+        - //*[@id="ca-history"]/a
+        - //*[@id="mw-content-text"]/div/p/a
+  
+  LoadingTime:
+    name:
+      Webpage resources loading time
+    description:
+      Load webpages with proxying disabled and enabled and compare loading time for both 
+      cases. Loading time for the case with proxy enabled should not exceed the loading 
+      time without proxy for more than two times.
+    parameters:
+      sections_uids: 
+        - superlight_page
+        - light_page
+        - medium_page
+        - heavy_page
+      hosts:
+        - https://wiki.archlinux.org/
+        - https://docs.docker.com/
+        - https://glossary.istqb.org/app/en/search/
+        - https://www.skype.com
+      runs: 10
+      delay_rate: 2
+      fails: 2
+  
+  AuthenticationOAUTH:
+    name:
+      Authentication with OAuth 
+    description:
+      Verify user can successfully Authorize to the website with OAuth open standard with 
+      proxy enabled. Use Google, Facebook, Github or Twitter account to permit sharing 
+      information about your account with third party applications or websites. 
+    parameters:
+      email: junkmail.dp.ua@gmail.com
+      services_pass: OtcVs114aqE
+      mailbox_pass: OtcVs114aqQ
+  
+  AuthenticationPassword:
+    name:
+      Authentication with Username and Password
+    description:
+      Verify user can successfully Authenticate to the website with Username and Password 
+      with proxy enabled.
+    parameters:
+      email: junkmail.dp.ua@gmail.com
+      services_pass: OtcVs114aqE
+
+  MultipleTabsLoading:
+    name:
+      Multiple tabs simultaneous loading
+    description:
+      Check proxy ability to handle requests from multiple browser tabs simultaneously. 
+    parameters:
+      hosts:
+        - https://dev.mysql.com/doc/refman/8.0/en/
+        - https://tools.ietf.org/
+        - https://docs.docker.com/
+      runs: 5
+      pass_rate: 0.85

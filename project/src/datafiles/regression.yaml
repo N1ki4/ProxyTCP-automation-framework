@@ -1,0 +1,8 @@
+testcases:
+
+  ProxyShutAfterCacheCleaning
+    name:
+    description:
+    parameters:
+      host: https://docs.docker.com/
+      cleanings: 5

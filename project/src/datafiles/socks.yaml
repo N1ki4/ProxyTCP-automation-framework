@@ -1,0 +1,57 @@
+testcases:
+
+  SocksHandshakeSuccess:
+    name: 
+      SOCKS5 protocol's handshake is successful 
+    description:
+      Check the implementation of the SOCKS5 handshake and confirm it 
+      is compliant to the RFC 1928.
+    parameters:
+      host: https://wiki.archlinux.org/
+  
+  StatusCodesCorrectTransfer:
+    name:
+      Proxy correctly transfers web page's http response status codes 
+    description:
+      Using curl terminal utility check if proxy server transfers 
+      responses correctly. To test this feature use online service for 
+      generating http codes https://httpstat.us. 
+    parameters:
+      hosts:
+        - https://httpstat.us/200
+        - https://httpstat.us/301
+        - https://httpstat.us/400
+        - https://httpstat.us/403
+        - https://httpstat.us/404
+        - https://httpstat.us/500
+        - https://httpstat.us/502
+        - https://httpstat.us/503
+      codes: [200, 301, 400, 403, 404, 500, 502, 503]
+
+  HTTPNotSupported:
+    name:
+      Proxy does not support http application layer protocol 
+    description:
+      Using curl terminal utility check if proxy server can handle http 
+      request. By design the http support is not provided.
+    parameters:
+      host: http://lutasprava.com
+  
+  FTPNotSupported:
+    name:
+      Proxy does not support ftp application layer protocol 
+    description:
+      Using curl terminal utility check if proxy server can handle ftp 
+      request. By design the ftp support is not provided.
+    parameters:
+      host: ftp://speedtest.tele2.net/
+  
+  IncorrectProxyProtocol:
+    name:
+      Connection fails when the proxy protocol selected is other than SOCKS5 
+    description:
+      Check that connections fails when the browser proxy is configured 
+      with the protocol other than SOCKS5.
+    parameters:
+      host: https://wiki.archlinux.org/
+      protocol: socks4
