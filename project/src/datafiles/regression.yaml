@@ -1,11 +1,94 @@
-parameters:
-  unicon_logfile: unicon.log
-
 testcases:
 
-  ProxyShutAfterCacheCleaning
+  ProxyDoesntShutAfterCacheCleaning:
     name:
+      Proxy does not shut down when browser cache is cleaned
     description:
+      Verify that proxy server stays on when cleaning browser cache.
     parameters:
       host: https://docs.docker.com/
-      cleanings: 5
+      cleanings: 10
+  
+  ProxyDoesNotAlterPorts:
+    name: 
+      Proxy does not alter tcp port number specified in request 
+    description:
+      Examine how web page works with explicitly specified ports.
+    parameters:
+      no_error: 
+        - https://tools.ietf.org
+        - https://tools.ietf.org:443
+      ssl_error:
+        - https://tools.ietf.org:80
+      connection_error:
+        - https://tools.ietf.org:20222
+        - https://tools.ietf.org:65535
+    
+  HostSupportCloudFlare:
+    name:
+      Proxy is able to connect to the webserver hosted on Cloudflare 
+    description:
+      Check if web resources hosted on Cloudflare are accessible through the proxy 
+      when using browser. Run test on 3 websites hosted on Cloudflare to make sure 
+      that proxy behavior is identical for all cases. 
+    parameters:
+      hosts:
+        - https://unpkg.com/
+        - https://www.allaboutcookies.org/
+        - https://forums.wxwidgets.org/
+
+  WebsiteResourcesLoading:
+    name:
+      Website resources loading on first open
+    description:
+      Load webpage with proxying disabled and enabled and compare the number of failed 
+      requests for both cases. The goal of this test case is to verify that proxy server 
+      does not cause any data loss when page is loaded.
+    parameters:
+      sections_uids:
+        - super_light_page
+        - light_web_page
+        - medium_web_page
+        - heavy_web_page
+      hosts:
+        - https://wiki.archlinux.org
+        - https://docs.docker.com/
+        - https://pypi.org/project/pyats/
+        - https://www.skype.com/
+      runs: 5
+      pass_rates: [0.8, 0.9, 0.95, 0.95]
+
+  LoadingTime:
+    name:
+      Webpage resources loading time
+    description:
+      Load webpages with proxying disabled and enabled and compare loading time for both 
+      cases. Loading time for the case with proxy enabled should not exceed the loading 
+      time without proxy for more than two times.
+    parameters:
+      sections_uids: 
+        - superlight_page
+        - light_page
+        - medium_page
+        - heavy_page
+      hosts:
+        - https://wiki.archlinux.org/
+        - https://docs.docker.com/
+        - https://glossary.istqb.org/app/en/search/
+        - https://www.skype.com
+      runs: 10
+      delay_rate: 2
+      fails: 2
+
+  MultipleTabsLoading:
+    name:
+      Multiple tabs simultaneous loading
+    description:
+      Check proxy ability to handle requests from multiple browser tabs simultaneously. 
+    parameters:
+      hosts:
+        - https://dev.mysql.com/doc/refman/8.0/en/
+        - https://tools.ietf.org/
+        - https://docs.docker.com/
+      runs: 3
+      pass_rate: 0.85
