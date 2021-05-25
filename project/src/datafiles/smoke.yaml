@@ -1,6 +1,3 @@
-parameters:
-  unicon_logfile: unicon.log
-
 testcases:
 
   WebPageOpensInChrome:
@@ -20,21 +17,6 @@ testcases:
     parameters:
       host: https://wiki.archlinux.org/
   
-  ProxyDoesNotAlterPorts:
-    name: 
-      Proxy does not alter tcp port number specified in request 
-    description:
-      Examine how web page works with explicitly specified ports.
-    parameters:
-      no_error: 
-        - https://tools.ietf.org
-        - https://tools.ietf.org:443
-      ssl_error:
-        - https://tools.ietf.org:80
-      connection_error:
-        - https://tools.ietf.org:20222
-        - https://tools.ietf.org:65535
-    
   InvalidProxyHost:
     name:
       Connection fails when the incorrect proxy server was selected
