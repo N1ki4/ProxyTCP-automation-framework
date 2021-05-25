@@ -13,7 +13,7 @@ _datafile_dir = os.path.join(src.__path__[0], "datafiles")
 def main(runtime):
 
     logging.getLogger().setLevel(logging.INFO)
-    logging.getLogger("unicon").setLevel(logging.INFO)
+    logging.getLogger("unicon").setLevel(logging.ERROR)
 
     testscript = os.path.join(_scripts_dir, "regression.py")
     datafile = os.path.join(_datafile_dir, "regression.yaml")

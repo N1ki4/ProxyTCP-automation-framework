@@ -2,7 +2,6 @@
 # pylint: disable=too-many-locals
 import re
 import json
-import socket
 import asyncio
 import logging
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -21,14 +20,8 @@ _log = logging.getLogger(__name__)
 _log.setLevel(logging.INFO)
 
 
-def get_host_ip(host) -> str:
-    """Retrieve IP of the host to set capture filters in tshark."""
-    host = re.compile(r"(http|https)://((\w+(-)?\w+\.)+\w+)").search(host)[2]
-    return socket.gethostbyname(host)
-
-
 class BrowserStats:
-    """Browser response data handler."""
+    """Browser response data toolbox."""
 
     LOADING_TIME = "loading_time"
     PERF_LOGS = "performance_logs"

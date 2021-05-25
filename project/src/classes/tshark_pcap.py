@@ -4,7 +4,7 @@ import pyshark
 
 
 class TsharkPcap(pyshark.FileCapture):
-    """Custom class extends FileCapture class from pyshark library."""
+    """pyshark.FileCapture extension class for pcap analysis."""
 
     _tls1_2_handshake_tmplate = (
         "Client Hello",
@@ -164,5 +164,5 @@ class TsharkPcap(pyshark.FileCapture):
             return pass_condition, content
 
 
-if __name__ == "__main__":
-    pcap_obj = TsharkPcap("../temp/user-2_tshark.pcap")
+# if __name__ == "__main__":
+#     pcap_obj = TsharkPcap("../temp/user-2_tshark.pcap")

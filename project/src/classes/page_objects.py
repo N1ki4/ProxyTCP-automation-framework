@@ -13,21 +13,22 @@ _log = logging.getLogger(__name__)
 _log.setLevel(logging.INFO)
 
 
-def check_inbox_for_code(mail: str, password: str) -> int:
-    sender = "GitHub"
-    box = Inbox(mail=mail, password=password)
-    box.get_messages()
-    message = box.find_last_message_from(sender)
-    message_body = message[2]
-    code = re.compile(r"Verification code: (\d+)").search(message_body)[1]
-    return code
-
-
 class AuthPage(Chrome):
+    """Page object for aithentication testcases."""
 
     _service = "grafana"
     _url = "https://grafana.com/auth/sign-in?plcmt=top-nav&cta=myaccount"
     _success_partial_url = "https://grafana.com/orgs/"
+
+    @staticmethod
+    def check_inbox_for_code(mail: str, password: str) -> int:
+        sender = "GitHub"
+        box = Inbox(mail=mail, password=password)
+        box.get_messages()
+        message = box.find_last_message_from(sender)
+        message_body = message[2]
+        code = re.compile(r"Verification code: (\d+)").search(message_body)[1]
+        return code
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -89,7 +90,7 @@ class AuthPage(Chrome):
         # get verification code
         _log.info(f"{self._loghead} - GitHub: Device verification code required")
         _log.info(f"{self._loghead} - GitHub: Check {mail} for code")
-        code = check_inbox_for_code(mail=mail, password=box_password)
+        code = self.check_inbox_for_code(mail=mail, password=box_password)
 
         # fill verification code field
         _log.info(f"{self._loghead} - GitHub: CODE `{code}`")
@@ -114,6 +115,7 @@ class AuthPage(Chrome):
 
 
 class PageForNavigation(Chrome):
+    """Page object for navigation testcase."""
 
     _url = "https://wiki.archlinux.org"
 

@@ -58,7 +58,7 @@ class FileUtils:
 
 
 class TShark:
-    """TShark."""
+    """Interface for remote tshark command executions."""
 
     def __init__(self, device: Device, capfile: str = None):
         self._device = device
@@ -110,7 +110,7 @@ class TShark:
 
 
 class TrafficDump:
-    """Connection for traffic monitoring.
+    """Connection manager for remote traffic monitoring.
 
     If no proxy is specified only one connection is established - to traffic source (user_endpoint)
     If proxy is specified two connections are established - to tarffic source and to the proxy host

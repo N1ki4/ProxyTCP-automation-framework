@@ -4,6 +4,7 @@ import imaplib
 
 
 class Inbox:
+    """Gmail Inbox interface for testing purposes."""
 
     _server = "imap.gmail.com"
 
