@@ -1,33 +1,6 @@
 import re
-import json
-from typing import Union
 
-
-class BrowserStatKeys:
-    """Response keys."""
-
-    LOADING_TIME = "loading_time"
-    PERF_LOGS = "performance_logs"
-    BROW_LOGS = "browser_logs"
-    CRIT_ERROR = "critical_error"
-
-
-def serializer(response: Union[list, dict]) -> Union[list, dict]:
-    """Serialize response data."""
-    key = BrowserStatKeys.PERF_LOGS
-
-    if isinstance(response, list):
-        for entry in response:
-            for index, _ in enumerate(entry[key]):
-                entry[key][index]["message"] = json.loads(entry[key][index]["message"])
-
-    elif isinstance(response, dict) and "critical_error" not in response.keys():
-        for index, _ in enumerate(response[key]):
-            response[key][index]["message"] = json.loads(
-                response[key][index]["message"]
-            )
-
-    return response
+from src.classes.clients import BrowserStats
 
 
 class BrowserResponseAnalyzer:
@@ -39,10 +12,10 @@ class BrowserResponseAnalyzer:
 
     def __init__(self, response: dict):
         self._response = response
-        self._loading_time = response.get(BrowserStatKeys.LOADING_TIME)
-        self._performance_logs = response.get(BrowserStatKeys.PERF_LOGS)
-        self._browser_logs = response.get(BrowserStatKeys.BROW_LOGS)
-        self._critical_error = response.get(BrowserStatKeys.CRIT_ERROR)
+        self._loading_time = response.get(BrowserStats.LOADING_TIME)
+        self._performance_logs = response.get(BrowserStats.PERF_LOGS)
+        self._browser_logs = response.get(BrowserStats.BROW_LOGS)
+        self._critical_error = response.get(BrowserStats.CRIT_ERROR)
 
         # get targeted entries of performance logs
         self._recieved_content = (
@@ -135,25 +108,3 @@ class CurlResponseAnalyzer:
         result = re.compile(pattern).search(self._response)
         if result is not None:
             return int(result[3])
-
-
-if __name__ == "__main__":
-    files = {
-        "noproxy": "A_no_proxy_no_port.json",
-        "noproxy_80": "A_no_proxy_port_80.json",
-        "noproxy_443": "A_no_proxy_port_443.json",
-        "noproxy_20222": "A_no_proxy_port_20222.json",
-        "noproxy_65535": "A_no_proxy_port_65535.json",
-        "proxy": "A_proxy_no_port.json",
-        "proxy_80": "A_proxy_port_80.json",
-        "proxy_443": "A_proxy_port_443.json",
-        "proxy_20222": "A_proxy_port_20222.json",
-        "proxy_65535": "A_proxy_port_65535.json",
-    }
-    results = {}
-    for k, v in files.items():
-        with open(v) as f:
-            opened_v = json.loads(f.read())
-        serialized_v = serializer(opened_v)
-        analyzed_v = BrowserResponseAnalyzer(serialized_v)
-        results.update({k: analyzed_v})

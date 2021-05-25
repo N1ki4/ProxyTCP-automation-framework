@@ -1,4 +1,5 @@
 # pylint: disable=cell-var-from-loop
+# pylint: disable=too-many-branches
 import pyshark
 
 
@@ -54,7 +55,6 @@ class TsharkPcap(pyshark.FileCapture):
         tls_packets = []
         for packet in self:
             try:
-                packet.ssl
                 tls_packets.append(packet.ssl)
             except AttributeError:
                 pass

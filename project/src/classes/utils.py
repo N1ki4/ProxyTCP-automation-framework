@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 
 import paramiko
 from paramiko import SSHClient
@@ -7,6 +8,10 @@ from scp import SCPClient
 from pyats.topology import Device
 
 import src
+
+
+_log = logging.getLogger(__name__)
+_log.setLevel(logging.INFO)
 
 
 _root = src.__path__[0]
@@ -57,6 +62,7 @@ class TShark:
 
     def __init__(self, device: Device, capfile: str = None):
         self._device = device
+        self._loghead = f"TShark@{device.name}"
 
         # default network interface of the device
         self._interface = device.interfaces.names.pop()
@@ -84,6 +90,14 @@ class TShark:
                 command += f" {k} {v}"
         command += f" {background}"
         self._device.tshark.execute(command)
+        _log.info(f"{self._loghead} - started via CLI: {command}")
+
+    def is_alive(self):
+        self._device.tshark.execute("echo -ne '\n'")
+        pid = self._device.tshark.execute("pidof tshark")
+        status = "ON" if pid else "OFF"
+        _log.info(f"{self._loghead} - check status: {status}")
+        return bool(pid)
 
     def stop(self) -> None:
         """Kill active tshark process running on the device."""
@@ -92,6 +106,7 @@ class TShark:
         if pid:
             command = f"kill -15 {pid}"
             self._device.tshark.execute(command + "&& echo -ne '\n'")
+            _log.info(f"{self._loghead} - terminared")
 
 
 class TrafficDump:
@@ -101,19 +116,22 @@ class TrafficDump:
     If proxy is specified two connections are established - to tarffic source and to the proxy host
     """
 
-    def __init__(self, grid_server: Device, proxy_server: Device = None):
+    def __init__(
+        self, grid_server: Device, proxy_server: Device = None, logfile: str = None
+    ):
 
         self._grid_server = grid_server
         self._proxy_server = proxy_server
+        self._logfile = logfile
 
-        self._grid_server.connect(alias="tshark")
+        self._grid_server.connect(alias="tshark", logfile=logfile)
         self._grid_server_dump = TShark(grid_server)
         self._grid_server_fileutils = FileUtils(grid_server)
 
         self._proxy_server_dump = None
         self._proxy_server_fileutils = None
         if self._proxy_server:
-            self._proxy_server.connect(alias="tshark")
+            self._proxy_server.connect(alias="tshark", logfile=logfile)
             self._proxy_server_dump = TShark(proxy_server)
             self._proxy_server_fileutils = FileUtils(proxy_server)
 

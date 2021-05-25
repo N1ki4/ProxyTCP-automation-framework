@@ -1,3 +1,5 @@
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-locals
 import re
 import json
 import socket
@@ -7,17 +9,16 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from abc import ABC
 from typing import Union
 
-
 from selenium import webdriver
 from selenium.common import exceptions
 from pyats.topology import Device
-
 
 from src.classes.utils import TrafficDump
 from src.classes.sut import Proxy
 
 
-_log = logging.getLogger(__name__).setLevel(logging.INFO)
+_log = logging.getLogger(__name__)
+_log.setLevel(logging.INFO)
 
 
 def get_host_ip(host) -> str:
@@ -53,6 +54,9 @@ class BrowserStats:
                 )
         return response
 
+    def __str__(self):
+        return f"{self.LOADING_TIME}, {self.PERF_LOGS}, {self.BROW_LOGS}, {self.CRIT_ERROR}"
+
 
 class ChromeBase(ABC):
     """ChromeBase.
@@ -73,6 +77,7 @@ class ChromeBase(ABC):
         proxy_port: str,
         session_wide_proxy: bool,
         traffic_dump: bool,
+        unicon_log: str,
     ):
         """Constructor.
 
@@ -87,6 +92,7 @@ class ChromeBase(ABC):
             session_wide_proxy (bool): enabe proxy switching on the session level
             (if proxy is defined)
             traffic_dump (str): enable traffic recording via tshark
+            unicon_log (str): file for unicon module logs
         """
 
         self._grid_server = grid_server
@@ -97,6 +103,7 @@ class ChromeBase(ABC):
         self._proxy_controller = None
         self._tshark_contrller = None
         self._exceptions = []
+        self._loghead = f"Chrome@{grid_server.name}"
 
         # apply options
         chromeoptions = webdriver.ChromeOptions()
@@ -117,7 +124,7 @@ class ChromeBase(ABC):
             self._proxy_enabled = True
 
             if session_wide_proxy is True:
-                self._proxy_controller = Proxy(proxy_server)
+                self._proxy_controller = Proxy(proxy_server, logfile=unicon_log)
 
         # enable webdriver logs collection
         self._chromeoptions.capabilities["goog:loggingPrefs"] = {
@@ -133,7 +140,9 @@ class ChromeBase(ABC):
 
         # initialize tshark
         if traffic_dump is True:
-            self._tshark_contrller = TrafficDump(grid_server, proxy_server)
+            self._tshark_contrller = TrafficDump(
+                grid_server, proxy_server, logfile=unicon_log
+            )
 
     def __enter__(self):
         if isinstance(self._proxy_controller, Proxy):
@@ -166,6 +175,7 @@ class Chrome(ChromeBase):
         proxy_port: str = None,
         session_wide_proxy: bool = True,
         traffic_dump: bool = False,
+        unicon_log: str = None,
     ):
         super().__init__(
             grid_server,
@@ -177,6 +187,7 @@ class Chrome(ChromeBase):
             proxy_port,
             session_wide_proxy,
             traffic_dump,
+            unicon_log,
         )
         self._driver = None
 
@@ -192,13 +203,17 @@ class Chrome(ChromeBase):
         return self._driver
 
     def get(self, host: str) -> None:
+        _log.info(f"{self._loghead} - get URL: {host}")
         try:
             self._driver.get(host)
+            _log.info(f"{self._loghead} - loading complete")
         except exceptions.WebDriverException as error:
             self._exceptions.append(error)
 
     def refresh(self) -> None:
+        _log.info(f"{self._loghead} - reloading webpage")
         self._driver.refresh()
+        _log.info(f"{self._loghead} - loading complete")
 
     def get_stats(self, write_to_file: str = None) -> dict:
         """Get results for post analyzis."""
@@ -258,6 +273,7 @@ class ChromeAsync(ChromeBase):
         proxy_port: str = None,
         session_wide_proxy: bool = True,
         traffic_dump: bool = False,
+        unicon_log: str = None,
     ):
         super().__init__(
             grid_server,
@@ -269,6 +285,7 @@ class ChromeAsync(ChromeBase):
             proxy_port,
             session_wide_proxy,
             traffic_dump,
+            unicon_log,
         )
         self._max_num_of_instances = max_num_of_instances
         self._drivers = []
@@ -292,8 +309,10 @@ class ChromeAsync(ChromeBase):
         loop = asyncio.get_event_loop()
         for index, host in enumerate(hosts):
             driver = self._drivers[index]
+            _log.info(f"{self._loghead} - get URL: {host}")
             loop.run_in_executor(executor, driver.get, host)
         loop.run_until_complete(asyncio.gather(*asyncio.Task.all_tasks(loop)))
+        _log.info(f"{self._loghead} - loading complete: {len(hosts)} pages loaded")
 
     def make_screenshots(self, name: str) -> None:
         for index, driver in enumerate(self._drivers):
@@ -322,7 +341,8 @@ class ChromeAsync(ChromeBase):
 
         return data
 
-    def _get_page_loading_time(self, driver) -> int:
+    @staticmethod
+    def _get_page_loading_time(driver) -> int:
         navigation_start = driver.execute_script(
             "return window.performance.timing.navigationStart"
         )
@@ -355,6 +375,7 @@ class Curl:
         proxy_port: str = None,
         session_wide_proxy: bool = True,
         traffic_dump: bool = False,
+        unicon_log: str = None,
     ):
         """Constructor.
 
@@ -368,15 +389,18 @@ class Curl:
             session_wide_proxy (bool): enabe proxy switching on the session level
             (if proxy is defined)
             traffic_dump (str): enable traffic recording via tshark
+            unicon_log (str): file for unicon module logs
         """
         self._client_server = client_server
         self._session_timeout = session_timeout
+        self._unicon_log = unicon_log
         self._base_command = "curl -I "
         self._command_args = ""
         self._proxy_enabled = False
         self._proxy_controller = None
         self._tshark_contrller = None
         self._response = None
+        self._loghead = f"CURL@{client_server.name}"
 
         # set proxy
         if isinstance(proxy_server, Device):
@@ -405,7 +429,9 @@ class Curl:
 
     def get(self, host: str) -> None:
         command = self._base_command + host + self._command_args
+        _log.info(f"{self._loghead} - executing command: {command}")
         self._response = self._client_server.curl.execute(command)
+        _log.info(f"{self._loghead} - response recieved: {self._response}")
 
     def get_response(self, file: str = None) -> str:
         if isinstance(file, str):
@@ -414,22 +440,18 @@ class Curl:
         return self._response
 
     def __enter__(self):
-        self._client_server.connect(alias="curl")
+        self._client_server.connect(alias="curl", logfile=self._unicon_log)
         if isinstance(self._proxy_controller, Proxy):
             self._proxy_controller.start()
-            print("start proxy")
         if isinstance(self._tshark_contrller, TrafficDump):
             self._tshark_contrller.start_capturing()
-            print("start tshark")
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         if isinstance(self._tshark_contrller, TrafficDump):
             self._tshark_contrller.stop_capturing()
-            print("stop tshark")
         if isinstance(self._proxy_controller, Proxy):
             self._proxy_controller.stop()
-            print("stop proxy")
         self._client_server.curl.disconnect()
 
 

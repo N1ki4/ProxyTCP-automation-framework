@@ -1,3 +1,4 @@
+# pylint: disable=unsubscriptable-object # pylint bug
 import email
 import imaplib
 
@@ -40,9 +41,8 @@ class Inbox:
                     else:
                         mail_content = message.get_payload()
             messages.append((mail_from, mail_subject, mail_content))
-        self._messages = messages
-        self._messages.reverse()
-        return True if self._messages else False
+        self._messages = reversed(messages)
+        return bool(self._messages)
 
     def find_last_message_from(self, sender: str):
         filtered_list = list(filter(lambda x: sender in x[0], self._messages))

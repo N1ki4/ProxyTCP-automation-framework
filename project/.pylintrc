@@ -16,6 +16,7 @@ disable=logging-fstring-interpolation,
 init-hook='import sys; sys.path.append("/pyats/project")'
 disable=
     C0114, # missing-module-docstring
+    C0115, # missing-class-docstring
     C0116,  # missing-function-docstring
 
 [BASIC]
@@ -27,6 +28,8 @@ const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__)|(_[a-z_]*))$
 reports=yes
 
 [FORMAT]
+# Acceptable short names
+good-names=i,j,k,v,f,ip,_,x,y
 # Maximum number of characters on a single line.
 max-line-length=100
 
@@ -43,7 +46,7 @@ min-similarity-lines=15
 ignored-argument-names=_.*
 
 # Maximum number of locals for function / method body
-max-locals=10
+max-locals=12
 
 # Maximum number of return / yield for function / method body
 max-returns=2
@@ -64,4 +67,7 @@ max-attributes=10
 min-public-methods=1
 
 # Maximum number of public methods for a class (see R0904).
-max-public-methods=7
+max-public-methods=10
+
+# Maximum nested blocks
+max-nested-blocks=6
