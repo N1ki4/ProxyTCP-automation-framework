@@ -1,6 +1,8 @@
 # pylint: disable=no-self-use # pyATS-related exclusion
 # pylint: disable=attribute-defined-outside-init # pyATS-related exclusion
 import os
+import logging
+from pprint import pformat
 
 
 from pyats import aetest
@@ -11,6 +13,9 @@ from src.classes.tshark_pcap import TsharkPcap
 from src.classes.utils import _temp_files_dir
 from src.classes.clients import Chrome
 from src.classes.analyse import BrowserResponseAnalyzer
+
+
+_log = logging.getLogger(__name__)
 
 
 class CommonSetup(aetest.CommonSetup):
@@ -32,9 +37,6 @@ class CommonSetup(aetest.CommonSetup):
 
 
 class BrockenCerts(aetest.Testcase):
-
-    parameters = {"host": "https://www.grupoemsa.org/"}
-
     @aetest.test
     def brocken_certs_test(self, user, proxy, host):
 
@@ -46,13 +48,11 @@ class BrockenCerts(aetest.Testcase):
         errors = data.get_browser_errors()
         pass_condition = len(errors) >= 1 and "ERR_CERT_AUTHORITY_INVALID" in errors[0]
         if not pass_condition:
+            _log.info(f"Web Brower logs:\n{pformat(stats)}")
             self.failed("Invalod response, no `ERR_CERT_AUTHORITY_INVALID` occured!")
 
 
 class ObsoleteTLS(aetest.Testcase):
-
-    parameters = {"host": "https://receipt1.seiko-cybertime.jp"}
-
     @aetest.test
     def obsolete_tls_test(self, user, proxy, host):
 
@@ -73,13 +73,11 @@ class ObsoleteTLS(aetest.Testcase):
                 if expected_message in error:
                     pass_condition = True
         if not pass_condition:
+            _log.info(f"Web Brower logs:\n{pformat(stats)}")
             self.failed("Invalod response, no `ERR_SSL_OBSOLETE_VERSION` occured!")
 
 
 class TLSHandshake12(aetest.Testcase):
-
-    parameters = {"host": "https://wiki.archlinux.org/"}
-
     @aetest.test
     def tls_1_2_handshake_test(self, user, proxy, host):
 
@@ -102,9 +100,6 @@ class TLSHandshake12(aetest.Testcase):
 
 
 class TLSHandshake13(aetest.Testcase):
-
-    parameters = {"host": "https://wiki.archlinux.org/"}
-
     @aetest.test
     def tls_1_3_handshake_test(self, user, proxy, host):
 
@@ -136,12 +131,11 @@ class CommonCleanup(aetest.CommonCleanup):
 if __name__ == "__main__":
     import sys
     import argparse
-    import logging
 
     from pyats import topology
 
-    logging.getLogger(__name__).setLevel(logging.DEBUG)
-    logging.getLogger("unicon").setLevel(logging.ERROR)
+    _log.setLevel(logging.DEBUG)
+    logging.getLogger("unicon").setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser(description="standalone parser")
     parser.add_argument("--testbed", dest="testbed", type=topology.loader.load)

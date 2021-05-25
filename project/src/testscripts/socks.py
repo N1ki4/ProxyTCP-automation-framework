@@ -1,6 +1,7 @@
 # pylint: disable=no-self-use # pyATS-related exclusion
 # pylint: disable=attribute-defined-outside-init # pyATS-related exclusion
 import os
+import logging
 
 
 from pyats import aetest
@@ -11,6 +12,9 @@ from src.classes.clients import Chrome, Curl
 from src.classes.tshark_pcap import TsharkPcap
 from src.classes.utils import _temp_files_dir
 from src.classes.analyse import CurlResponseAnalyzer
+
+
+_log = logging.getLogger(__name__)
 
 
 class CommonSetup(aetest.CommonSetup):
@@ -32,9 +36,6 @@ class CommonSetup(aetest.CommonSetup):
 
 
 class SocksHandshakeSuccess(aetest.Testcase):
-
-    parameters = {"host": "https://wiki.archlinux.org/"}
-
     @aetest.test
     def test_socks_handshake(self, user, proxy, host):
 
@@ -50,21 +51,6 @@ class SocksHandshakeSuccess(aetest.Testcase):
 
 
 class StatusCodesCorrectTransfer(aetest.Testcase):
-
-    parameters = {
-        "hosts": [
-            "https://httpstat.us/200",
-            "https://httpstat.us/301",
-            "https://httpstat.us/400",
-            "https://httpstat.us/403",
-            "https://httpstat.us/404",
-            "https://httpstat.us/500",
-            "https://httpstat.us/502",
-            "https://httpstat.us/503",
-        ],
-        "codes": [200, 301, 400, 403, 404, 500, 502, 503],
-    }
-
     @aetest.setup
     def setup_loop(self):
         aetest.loop.mark(
@@ -85,24 +71,18 @@ class StatusCodesCorrectTransfer(aetest.Testcase):
 
 
 class HTTPNotSupported(aetest.Testcase):
-
-    parameters = {"host": "http://lutasprava.com"}
-
     @aetest.test
     def connect_http(self, user, proxy, host):
 
         with Curl(client_server=user, proxy_server=proxy, session_timeout=10) as curl:
             curl.get(host)
-            stats = curl.get_response("omg.txt")
+            stats = curl.get_response()
 
         if "Operation timed out" not in stats:
             self.failed(f"Expected connection timeout, got {stats}")
 
 
 class FTPNotSupported(aetest.Testcase):
-
-    parameters = {"host": "ftp://speedtest.tele2.net/"}
-
     @aetest.test
     def connect_http(self, user, proxy, host):
 
@@ -115,9 +95,6 @@ class FTPNotSupported(aetest.Testcase):
 
 
 class IncorrectProxyProtocol(aetest.Testcase):
-
-    parameters = {"host": "https://wiki.archlinux.org/ ", "protocol": "socks4"}
-
     @aetest.test
     def incorrect_protocol_test(self, user, proxy, host, protocol):
 
@@ -146,12 +123,11 @@ class CommonCleanup(aetest.CommonCleanup):
 if __name__ == "__main__":
     import sys
     import argparse
-    import logging
 
     from pyats import topology
 
-    logging.getLogger(__name__).setLevel(logging.DEBUG)
-    logging.getLogger("unicon").setLevel(logging.ERROR)
+    _log.setLevel(logging.DEBUG)
+    logging.getLogger("unicon").setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser(description="standalone parser")
     parser.add_argument("--testbed", dest="testbed", type=topology.loader.load)

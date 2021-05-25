@@ -1,9 +1,15 @@
 import os
+import logging
+
 
 from pyats import aetest
 
+
 import src
 from src.environment.google_cloud_setup import builder
+
+
+_log = logging.getLogger(__name__)
 
 
 parameters = {"root": src.__path__[0]}
@@ -24,9 +30,8 @@ class GoogleCloudCleanUp(aetest.Testcase):
 if __name__ == "__main__":
     import sys
     import argparse
-    import logging
 
-    logging.getLogger(__name__).setLevel(logging.DEBUG)
+    _log.setLevel(logging.DEBUG)
     logging.getLogger("src.environment.google_cloud_setup.builder").setLevel(
         logging.DEBUG
     )

@@ -1,11 +1,15 @@
 # pylint: disable=no-self-use # pyATS-related exclusion
 # pylint: disable=attribute-defined-outside-init # pyATS-related exclusion
 from pyats import aetest
+import logging
 
 
 from src.classes.remote_tools import SeleniumGrid
 from src.classes.sut import Proxy
 from src.classes.clients import Chrome
+
+
+_log = logging.getLogger(__name__)
 
 
 class CommonSetup(aetest.CommonSetup):
@@ -59,11 +63,10 @@ class CommonCleanup(aetest.CommonCleanup):
 if __name__ == "__main__":
     import sys
     import argparse
-    import logging
 
     from pyats import topology
 
-    logging.getLogger(__name__).setLevel(logging.DEBUG)
+    _log.setLevel(logging.DEBUG)
     logging.getLogger("unicon").setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser(description="standalone parser")
