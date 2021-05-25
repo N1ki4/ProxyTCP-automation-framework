@@ -1,3 +1,6 @@
+parameters:
+  unicon_logfile: unicon.log
+
 testcases:
 
   WebPageOpensInChrome:
@@ -50,5 +53,5 @@ testcases:
       with wrong proxy server tcp port.
     parameters:
       host: https://wiki.archlinux.org/
-      proxy_ip: "8010"
+      proxy_port: "8010"
 

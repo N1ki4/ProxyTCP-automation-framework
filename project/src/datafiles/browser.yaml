@@ -1,3 +1,6 @@
+parameters:
+  unicon_logfile: unicon.log
+
 testcases:
 
   HostSupportCloudFlare:
@@ -85,35 +88,19 @@ testcases:
       does not cause any data loss when page is loaded.
     parameters:
       sections_uids:
+        - super_light_page
         - light_web_page
         - medium_web_page
         - heavy_web_page
       hosts:
-        - https://pypi.org/project/pyats/
+        - https://wiki.archlinux.org
         - https://docs.docker.com/
+        - https://pypi.org/project/pyats/
         - https://www.skype.com/
+      runs: 5
+      pass_rates: [0.8, 0.9, 0.95, 0.95]
   
-  SuperLightWebpageResourceLoading:
-    name:
-      Website resources loading on first open of the super-light web page
-    description:
-      Load webpage with proxying disabled and enabled and compare the number of failed 
-      requests for both cases. The goal of this test case is to verify that proxy server 
-      does not cause any data loss when page is loaded.
-    parameters:
-      sections_uids:
-        - first_run
-        - second_run
-        - third_run
-        - fourth_run
-        - fifth_run
-        - sixth_run
-        - seventh_run
-        - eighth_run
-        - ninth_run
-        - tenth_run
-      host: https://wiki.archlinux.org
-  
+
   ReloadingLightWebpage:
     name:
       Light web page can be successfully reloaded multiple times 
@@ -122,7 +109,7 @@ testcases:
       is to check the sustainability of the proxy server.
     parameters:
       host: https://docs.docker.com/
-      runs: 3
+      runs: 5
       pass_rate: 0.95
   
   ChainNavigation:
@@ -190,5 +177,5 @@ testcases:
         - https://dev.mysql.com/doc/refman/8.0/en/
         - https://tools.ietf.org/
         - https://docs.docker.com/
-      runs: 5
+      runs: 3
       pass_rate: 0.85

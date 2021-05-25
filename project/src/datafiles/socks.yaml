@@ -1,3 +1,6 @@
+parameters:
+  unicon_logfile: unicon.log
+
 testcases:
 
   SocksHandshakeSuccess:
