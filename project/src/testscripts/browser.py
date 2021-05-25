@@ -4,9 +4,7 @@ import statistics
 import logging
 from pprint import pformat
 
-
 from pyats import aetest
-
 
 from src.classes.remote_tools import SeleniumGrid
 from src.classes.clients import Chrome, ChromeAsync
@@ -249,7 +247,7 @@ class WebsiteResourcesLoading(aetest.Testcase):
 
             _log.info(console_log)
             if not pass_condition:
-                self.failed("To many resources were lost")
+                self.failed("To many resources were lost", goto=["next_tc"])
 
 
 class ReloadingLightWebpage(aetest.Testcase):
