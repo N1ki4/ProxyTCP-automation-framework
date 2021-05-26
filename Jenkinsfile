@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                sh sudo docker-compose run testenv bash ./project/code-assessment.sh
+                sh 'sudo docker-compose run testenv bash ./project/code-assessment.sh'
             }
         }
     }
