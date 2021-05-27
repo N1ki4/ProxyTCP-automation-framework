@@ -176,7 +176,18 @@ class Builder:
                 _log.error(f"Error occured while creating firewall rule: {error}")
                 raise error
 
+    def _set_exit_code(self):
+        for inst in self._instances:
+            instance = controllers.InstanceController(
+                project=self._project, instance=inst
+            )
+            stat = instance.get()
+            if not instance._is_good_response(stat):
+                return 0
+        return 1
+
     def execute_setup_scenario(self):
+        ansible_signal = self._set_exit_code()
         _log.info("Creating test setup ...")
 
         self._create_network()
@@ -184,6 +195,7 @@ class Builder:
         self._apply_firewall_rules()
 
         _log.info("Test setup successfully created")
+        return ansible_signal
 
     def execute_teardown_scenario(self):
         _log.info("Deleting test setup ...")
