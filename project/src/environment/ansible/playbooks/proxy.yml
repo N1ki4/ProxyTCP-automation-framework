@@ -8,7 +8,7 @@
 
   - name: Clone ProxyTCP Repository.
     ansible.builtin.git:
-      repo: "https://github.com/vizhyk/proxytcp.git"
+      repo: "https://github.com/YuriiShp/proxytcp.git"
       dest: /home/{{ linux_user }}/proxytcp
   
   - name: Clone Googletest repository to the project directory

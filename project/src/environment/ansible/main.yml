@@ -1,4 +1,3 @@
 ---
 - import_playbook: ./playbooks/shark.yml
 - import_playbook: ./playbooks/docker.yml
-- import_playbook: ./playbooks/proxy.yml

@@ -1,0 +1,12 @@
+# Ansible playbook for deleting ProxyTCP
+---
+- hosts: proxy
+  become: yes
+  vars: 
+    linux_user: "ubuntu"
+  tasks:
+
+  - name: Delete proxy directory.
+    file:
+      state: absent
+      path: /home/{{ linux_user }}/proxytcp/
