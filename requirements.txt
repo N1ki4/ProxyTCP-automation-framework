@@ -2,8 +2,10 @@ ansible==3.2.0
 ansible-base==2.10.8
 ansible-runner==1.4.7
 google-cloud-compute==0.2.1
+selenium==3.141.0
 cryptography==3.3.1
 polling==0.3.1
+pyshark==0.4.3
 scp==0.13.3
 black==20.8b1
 flake8==3.9.0

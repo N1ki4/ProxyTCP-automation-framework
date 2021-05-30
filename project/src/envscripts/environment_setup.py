@@ -45,7 +45,7 @@ class GoogleCloudSetup(aetest.Testcase):
             setup.generate_testbed(testbed_file=_testbed)
 
         if code == 1:
-            self.passed("Skip Ansible", goto=["exit"])
+            self.passed("Skip Ansible", goto=["common_cleanup"])
 
 
 class AnsibleSetup(aetest.Testcase):
@@ -55,6 +55,10 @@ class AnsibleSetup(aetest.Testcase):
     def main(self, root):
         _ansible_root = os.path.join(root, "environment", "ansible")
         ansible_runner.run(project_dir=_ansible_root, playbook="main.yml")
+
+
+class CommonCleanup(aetest.CommonCleanup):
+    pass
 
 
 if __name__ == "__main__":
