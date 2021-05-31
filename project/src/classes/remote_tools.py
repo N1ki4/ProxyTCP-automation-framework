@@ -18,14 +18,12 @@ class SeleniumGrid:
         self._loghead = f"SeleniumGrid@{device.name}"
         self._logfile = logfile
 
-    @retry_on_unicon_error
     def up(self):
         self._connect()
         self._device.grid.execute("docker-compose up --no-start")
         self._disconnect()
         _log.info(f"{self._loghead} - created")
 
-    @retry_on_unicon_error
     def start(self):
         self._connect()
         self._device.grid.execute("docker-compose start")

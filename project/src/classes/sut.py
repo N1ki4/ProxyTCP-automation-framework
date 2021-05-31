@@ -17,7 +17,6 @@ class Proxy:
         self._loghead = f"ProxyServer(SUT)@{device.name}"
         self._logfile = logfile
 
-    @retry_on_unicon_error
     def start(self):
         self._device.connect(alias="proxy", logfile=self._logfile)
         if not self.is_alive():
