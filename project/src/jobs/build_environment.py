@@ -11,7 +11,7 @@ _scripts_dir = os.path.join(src.__path__[0], "envscripts")
 
 
 def main(runtime):
-    max_reps = 3
+    max_reps = 5
 
     logging.getLogger().setLevel(logging.INFO)
     logging.getLogger("src.environment.google_cloud_setup.builder").setLevel(

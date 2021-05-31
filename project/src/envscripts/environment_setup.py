@@ -20,6 +20,7 @@ class GoogleCloudSetup(aetest.Testcase):
 
     @aetest.test
     def main(self, steps, root, service_key):
+        print(service_key)
         _build_file = os.path.join(
             root, "environment", "google_cloud_setup", "setup.config.yaml"
         )
@@ -61,7 +62,7 @@ class AnsibleSetup(aetest.Testcase):
 
 
 class DeployGrid(aetest.Testcase):
-    """Deploy Selenium Grid"""
+    """Deploy Selenium Grid."""
 
     @aetest.setup
     def setup(self, root):
