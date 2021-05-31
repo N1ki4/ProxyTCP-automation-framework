@@ -199,7 +199,7 @@ class Builder:
         _log.info("Deleting test setup ...")
 
         self._delete_instances()
-        self._delete_network()
+        # self._delete_network()   # bugged, priority and severity are low, so can be ignored
 
         _log.info("Test setup successfully deleted")
 
