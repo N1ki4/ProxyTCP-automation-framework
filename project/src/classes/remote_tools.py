@@ -19,12 +19,18 @@ class SeleniumGrid:
         self._logfile = logfile
 
     @retry_on_unicon_error
+    def up(self):
+        self._connect()
+        self._device.grid.execute("docker-compose up --no-start")
+        self._disconnect()
+        _log.info(f"{self._loghead} - created")
+
+    @retry_on_unicon_error
     def start(self):
-        command = "docker-compose start"
-        self._device.connect(alias="grid", logfile=self._logfile)
+        self._connect()
         self._device.grid.execute("docker-compose start")
         time.sleep(10)  # temporary solution
-        _log.info(f"{self._loghead} - started via CLI: {command}")
+        _log.info(f"{self._loghead} - started via CLI")
 
     @retry_on_unicon_error
     def restart(self):
@@ -43,5 +49,11 @@ class SeleniumGrid:
     @retry_on_unicon_error
     def stop(self):
         self._device.grid.execute("docker-compose stop")
-        self._device.grid.disconnect()
+        self._disconnect()
         _log.info(f"{self._loghead} - disconnected")
+
+    def _connect(self):
+        self._device.connect(alias="grid")
+
+    def _disconnect(self):
+        self._device.grid.disconnect()

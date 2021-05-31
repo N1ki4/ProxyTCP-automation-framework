@@ -1,10 +1,11 @@
 import os
 import logging
 
-from pyats import aetest
+from pyats import aetest, topology
 import ansible_runner
 
 import src
+from src.classes.remote_tools import SeleniumGrid
 from src.environment.google_cloud_setup import builder
 
 
@@ -34,7 +35,7 @@ class GoogleCloudSetup(aetest.Testcase):
         setup = builder.Builder(build_file=_build_file, service_acc_key=service_key)
 
         with steps.start("Executing main building scenario"):
-            code = setup.execute_setup_scenario()
+            setup.execute_setup_scenario()
         with steps.start("Generating SSH keys"):
             setup.add_ssh_keys(private_key_file=_ssh_file)
         with steps.start("Generating ansible config files"):
@@ -44,9 +45,6 @@ class GoogleCloudSetup(aetest.Testcase):
         with steps.start("Generating testbed"):
             setup.generate_testbed(testbed_file=_testbed)
 
-        if code == 1:
-            self.passed("Skip Ansible", goto=["common_cleanup"])
-
 
 class AnsibleSetup(aetest.Testcase):
     """Run playbooks. Setup docker, tshark and proxy."""
@@ -55,6 +53,22 @@ class AnsibleSetup(aetest.Testcase):
     def main(self, root):
         _ansible_root = os.path.join(root, "environment", "ansible")
         ansible_runner.run(project_dir=_ansible_root, playbook="main.yml")
+
+
+class DeployGrid(aetest.Testcase):
+    """Deploy Selenium Grid"""
+
+    @aetest.setup
+    def setup(self, root):
+        testbed_file = os.path.join(root, "testbed.yaml")
+        testbed = topology.loader.load(testbed_file)
+        grid_server = testbed.devices["user-2"]
+        self.parent.parameters.update({"grid_server": grid_server})
+
+    @aetest.test
+    def main(self, grid_server):
+        grid = SeleniumGrid(grid_server)
+        grid.up()
 
 
 class CommonCleanup(aetest.CommonCleanup):

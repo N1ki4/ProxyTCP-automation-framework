@@ -10,7 +10,7 @@ parameters = {"root": src.__path__[0]}
 
 
 class AnsibleSetup(aetest.Testcase):
-    """Run playbooks. Setup docker, tshark and proxy."""
+    """Run playbooks. Setup proxy."""
 
     @aetest.test
     def main(self, root):

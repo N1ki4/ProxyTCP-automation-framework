@@ -29,7 +29,7 @@ reports=yes
 
 [FORMAT]
 # Acceptable short names
-good-names=i,j,k,v,f,ip,_,x,y
+good-names=i,j,k,v,f,ip,_,x,y,up
 # Maximum number of characters on a single line.
 max-line-length=100
 
