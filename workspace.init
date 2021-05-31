@@ -1,10 +1,7 @@
 #!/bin/bash
 
-# add secret string to pyats.conf file
-CONF=${WORKSPACE}/pyats.conf
-echo "[secrets]" > $CONF
-echo "string.representer = pyats.utils.secret_strings.FernetSecretStringRepresenter" >> $CONF
-echo "string.key = fgJzQnYmaMtPfjK8S43ld-N-nbpfJhJsDvuPX1Bh-I4=" >> $CONF
-
+# install tshark
+apt update;
+yes | apt install tshark
 # change mode for code-assessment.sh
 chmod +x ${WORKSPACE}/project/code-assessment.sh
