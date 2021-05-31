@@ -31,19 +31,20 @@ class GoogleCloudSetup(aetest.Testcase):
         _ssh_file = os.path.join(
             root, "environment", "google_cloud_setup", "cloud_access.key"
         )
-
-        setup = builder.Builder(build_file=_build_file, service_acc_key=service_key)
-
-        with steps.start("Executing main building scenario"):
-            setup.execute_setup_scenario()
-        with steps.start("Generating SSH keys"):
-            setup.add_ssh_keys(private_key_file=_ssh_file)
-        with steps.start("Generating ansible config files"):
-            setup.generate_ansible_configs(
-                general=_ansible_general, groups=_ansible_hosts
-            )
-        with steps.start("Generating testbed"):
-            setup.generate_testbed(testbed_file=_testbed)
+        try:
+            setup = builder.Builder(build_file=_build_file, service_acc_key=service_key)
+            with steps.start("Executing main building scenario"):
+                setup.execute_setup_scenario()
+            with steps.start("Generating SSH keys"):
+                setup.add_ssh_keys(private_key_file=_ssh_file)
+            with steps.start("Generating ansible config files"):
+                setup.generate_ansible_configs(
+                    general=_ansible_general, groups=_ansible_hosts
+                )
+            with steps.start("Generating testbed"):
+                setup.generate_testbed(testbed_file=_testbed)
+        except Exception as exp:
+            self.errored(f"{exp} occured!", goto=["exit"])
 
 
 class AnsibleSetup(aetest.Testcase):
@@ -52,7 +53,11 @@ class AnsibleSetup(aetest.Testcase):
     @aetest.test
     def main(self, root):
         _ansible_root = os.path.join(root, "environment", "ansible")
-        ansible_runner.run(project_dir=_ansible_root, playbook="main.yml")
+
+        try:
+            ansible_runner.run(project_dir=_ansible_root, playbook="main.yml")
+        except Exception as exp:
+            self.errored(f"{exp} occured!", goto=["exit"])
 
 
 class DeployGrid(aetest.Testcase):
@@ -62,13 +67,14 @@ class DeployGrid(aetest.Testcase):
     def setup(self, root):
         testbed_file = os.path.join(root, "testbed.yaml")
         testbed = topology.loader.load(testbed_file)
-        grid_server = testbed.devices["user-2"]
-        self.parent.parameters.update({"grid_server": grid_server})
+        grid_servers = [v for k,v in testbed.devices.items() if "proxy" not in k]
+        self.parent.parameters.update([("grid_servers", grid_servers),])
 
     @aetest.test
-    def main(self, grid_server):
-        grid = SeleniumGrid(grid_server)
-        grid.up()
+    def main(self, grid_servers):
+        for server in grid_servers:
+            grid = SeleniumGrid(server)
+            grid.up()
 
 
 class CommonCleanup(aetest.CommonCleanup):

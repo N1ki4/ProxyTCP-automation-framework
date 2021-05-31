@@ -149,7 +149,6 @@ class NetworkController(Controller):
         response = self._session.request(method=method, url=url)
         return response
 
-    @retry_on_error(max_attempts=2)
     def delete(self):
         """Build and send API 'delete' request."""
 

@@ -187,7 +187,6 @@ class Builder:
         return 1
 
     def execute_setup_scenario(self):
-        ansible_signal = self._set_exit_code()
         _log.info("Creating test setup ...")
 
         self._create_network()
@@ -195,7 +194,6 @@ class Builder:
         self._apply_firewall_rules()
 
         _log.info("Test setup successfully created")
-        return ansible_signal
 
     def execute_teardown_scenario(self):
         _log.info("Deleting test setup ...")
