@@ -67,8 +67,12 @@ class DeployGrid(aetest.Testcase):
     def setup(self, root):
         testbed_file = os.path.join(root, "testbed.yaml")
         testbed = topology.loader.load(testbed_file)
-        grid_servers = [v for k,v in testbed.devices.items() if "proxy" not in k]
-        self.parent.parameters.update([("grid_servers", grid_servers),])
+        grid_servers = [v for k, v in testbed.devices.items() if "proxy" not in k]
+        self.parent.parameters.update(
+            [
+                ("grid_servers", grid_servers),
+            ]
+        )
 
     @aetest.test
     def main(self, grid_servers):

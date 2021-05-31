@@ -2,7 +2,6 @@ import os
 import sys
 import argparse
 import logging
-from time import sleep
 
 from pyats.easypy import run
 
