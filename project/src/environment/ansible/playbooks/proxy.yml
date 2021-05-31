@@ -1,6 +1,7 @@
 # Ansible playbook for installing ProxyTCP
 ---
 - hosts: proxy
+  gather_facts: no
   become: yes
   vars: 
     linux_user: "ubuntu"
@@ -9,6 +10,9 @@
     - name: Wait for system to become reachable over ssh
       wait_for_connection:
         timeout: 120
+    
+    - name: Gather facts for first time
+      setup:
 
     - name: Clone ProxyTCP Repository.
       ansible.builtin.git:

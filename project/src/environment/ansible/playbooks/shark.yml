@@ -1,12 +1,16 @@
 # Ansible playbook Tshark - install tshark
 ---
 - hosts: all
+  gather_facts: no
   become: yes
   tasks:
 
     - name: Wait for system to become reachable over ssh
       wait_for_connection:
         timeout: 120
+    
+    - name: Gather facts for first time
+      setup:
 
     - name: Let non root to capture traffic
       ansible.builtin.debconf:
