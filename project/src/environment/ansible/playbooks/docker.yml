@@ -2,10 +2,13 @@
 ---
 - hosts: users
   become: yes
-  ignore_unreachable: yes
   vars: 
     docker_compose_version: "1.29.0"
   tasks:
+
+    - name: Wait for system to become reachable over ssh
+      wait_for_connection:
+        timeout: 120
 
     - name: Update packages
       apt: update_cache=yes cache_valid_time=3600

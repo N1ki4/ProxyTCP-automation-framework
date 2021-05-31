@@ -2,12 +2,15 @@
 ---
 - hosts: proxy
   become: yes
-  ignore_unreachable: yes
   vars: 
     linux_user: "ubuntu"
   tasks:
 
-  - name: Delete proxy directory.
-    file:
-      state: absent
-      path: /home/{{ linux_user }}/proxytcp/
+    - name: Wait for system to become reachable over ssh
+      wait_for_connection:
+        timeout: 120
+
+    - name: Delete proxy directory.
+      file:
+        state: absent
+        path: /home/{{ linux_user }}/proxytcp/
