@@ -2,6 +2,7 @@
 ---
 - hosts: proxy
   become: yes
+  ignore_unreachable: yes
   vars: 
     linux_user: "ubuntu"
   tasks:

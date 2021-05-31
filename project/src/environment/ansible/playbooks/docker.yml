@@ -2,6 +2,7 @@
 ---
 - hosts: users
   become: yes
+  ignore_unreachable: yes
   vars: 
     docker_compose_version: "1.29.0"
   tasks:
