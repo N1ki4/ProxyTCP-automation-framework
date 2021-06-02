@@ -102,9 +102,9 @@ For the development/debugging purposes Microsoft VS Code text editor with Docker
   ```
 - Open VS Code and attach to running container
 - Activate virtual environment
-- You are ready
+- You are ready to go
 
-\*-Note, once container is up it can be stopped and restarted later, dont down it
+\*-Note, once container is up it can be stopped and restarted later, dont down it, unles you want to make some changes in the environment.
 
 ### Project structure
 Core project structure is implemnted relying on the pyATS data model, thus this project encounters three essential groups of structural components: jobs, testscripts and datafiles:
