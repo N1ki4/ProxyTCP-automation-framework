@@ -1,6 +1,6 @@
 # Test Framework for Proxy Server
 
-Test Framework to allows to perform fullscale automated testing of the [Proxy Server](https://github.com/YuriiShp/proxytcp.git), further called SUT. Framework provides services of virtual test environment creation and setup, SUT deployment,  tests execution and post execution environment cleanup. Framework can be easily integrated into CI piplenes (Jenkins in this case) to run different test suits on specific Github trigger events as well as run them manually.
+Test Framework allows to perform fullscale automated testing of the [Proxy Server](https://github.com/YuriiShp/proxytcp.git), further called SUT. Framework provides services of virtual test environment creation and setup, SUT deployment,  tests execution and post execution environment cleanup. Framework can be easily integrated into CI piplenes (Jenkins in this case) to run different test suits on specific Github trigger events as well as run them manually.
 
 Current project build includes three test suites: smoke, regression and main, but more suites can be added.
 
@@ -84,8 +84,8 @@ Now log in to Jenkins dashpoard and create pipeline for each test suite in the p
 5. Paste corresponding Groovy script from the jenkins/ directory into the script test area and click save.
    
 Pipelines are ready and functional but few more things need to be done, which are optional but were ment to be:
-- Configure ![E-mail notifiacations plugin](https://www.360logica.com/blog/email-notification-in-jenkins/)
-- Set up ![Github Webhook](https://www.blazemeter.com/blog/how-to-integrate-your-github-repository-to-your-jenkins-project) for the SUT project (this option enables Jenkins builds on push events)
+- Configure [E-mail notifiacations plugin](https://www.360logica.com/blog/email-notification-in-jenkins/)
+- Set up [Github Webhook](https://www.blazemeter.com/blog/how-to-integrate-your-github-repository-to-your-jenkins-project) for the SUT project (this option enables Jenkins builds on push events)
 So now our jobs can be run manually and triggered on Github push events (I configured triggers in the way, that smoke job is being triggered, when changes are pushed to the develop branch, but regression is triggered when pushes are intended for master). After job is complete, email notification with logs is sent to the recipients, defined in the mail plugin configs.
 
 ## Tests Development and Debugging
