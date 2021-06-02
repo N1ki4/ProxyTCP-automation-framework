@@ -1,8 +1,8 @@
 # Test Framework for Proxy Server
 
-Test Framework allows to perform fullscale automated testing of the [Proxy Server](https://github.com/YuriiShp/proxytcp.git), further called SUT. Framework provides services of virtual test environment creation and setup, SUT deployment,  tests execution and post execution environment cleanup. Framework can be easily integrated into CI piplenes (Jenkins in this case) to run different test suits on specific Github trigger events as well as run them manually.
+Test Framework allows to perform fullscale automated testing of the [Proxy Server](https://github.com/YuriiShp/proxytcp.git), further called SUT. Framework provides services of virtual test environment creation and setup, SUT deployment,  tests execution and post execution environment cleanup. Framework jobs can be easily integrated into CI piplenes (Jenkins in this case) to run different test suits on specific Github trigger events as well as run manually.
 
-Current project build includes three test suites: smoke, regression and main, but more suites can be added.
+Current project build includes three test suites: smoke, regression and main, but more [can be added](#tests-development-and-debugging).
 
 ## Table of Contents
 
