@@ -21,14 +21,14 @@ To be able to run tests on your machine, threre are few necessary steps to get s
 - In Google Cloud project create and download [service accout key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#:~:text=You%20can%20create%20a%20service%20account%20key%20using,is%20the%20ID%20of%20your%20Google%20Cloud%20project.) in json format*
 - Create directory /share and move your service accout key in there**
 
-\* - Note, service account key can be shared among multiple machines, so steps 3 and 4 can be scipped in case someone already done Cloud project configuration.
+\* - Note, service account key can be shared among multiple machines, so steps 3 and 4 can be skipped in case someone already done Cloud project configuration.
 
 \*\* - Note, this project uses volumes bounded to the Linux file system, to be able to run it on Windows consider installing WSL with Ubuntu.
 
 
 ## Usage
 
-Clone project to your machine:
+Clone project to the local repository on your machine:
 ```bash
 git clone https://github.com/YuriiShp/ProxyTCP-automation-framework.git
 ```
