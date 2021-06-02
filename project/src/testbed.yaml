@@ -1,5 +1,5 @@
 testbed:
-  name: testing-network-308220
+  name: proxy-test-medium
   credentials:
     default:
       name: ubuntu
@@ -11,37 +11,37 @@ devices:
     connections:
       cli:
         command: ssh -i /pyats/project/src/environment/google_cloud_setup/cloud_access.key
-          ubuntu@35.228.8.207
+          ubuntu@34.88.128.44
   user-2:
     os: linux
     type: linux-vm
     connections:
       cli:
         command: ssh -i /pyats/project/src/environment/google_cloud_setup/cloud_access.key
-          ubuntu@35.228.30.91
+          ubuntu@34.88.18.225
   proxy-vm:
     os: linux
     type: linux-vm
     connections:
       cli:
         command: ssh -i /pyats/project/src/environment/google_cloud_setup/cloud_access.key
-          ubuntu@35.228.244.17
+          ubuntu@34.88.118.158
 topology:
   user-1:
     interfaces:
       ens4:
         link: interconnect
         type: ethernet
-        ipv4: 10.166.0.2/20
+        ipv4: 10.166.0.24/20
   user-2:
     interfaces:
       ens4:
         link: interconnect
         type: ethernet
-        ipv4: 10.166.0.3/20
+        ipv4: 10.166.0.25/20
   proxy-vm:
     interfaces:
       ens4:
         link: interconnect
         type: ethernet
-        ipv4: 10.166.0.4/20
+        ipv4: 10.166.0.26/20
