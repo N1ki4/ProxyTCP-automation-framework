@@ -86,6 +86,7 @@ Now log in to Jenkins dashpoard and create pipeline for each test suite in the p
 Pipelines are ready and functional but few more things need to be done, which are optional but were ment to be:
 - Configure [E-mail notifiacations plugin](https://www.360logica.com/blog/email-notification-in-jenkins/)
 - Set up [Github Webhook](https://www.blazemeter.com/blog/how-to-integrate-your-github-repository-to-your-jenkins-project) for the SUT project (this option enables Jenkins builds on push events)
+
 So now our jobs can be run manually and triggered on Github push events (I configured triggers in the way, that smoke job is being triggered, when changes are pushed to the develop branch, but regression is triggered when pushes are intended for master). After job is complete, email notification with logs is sent to the recipients, defined in the mail plugin configs.
 
 ## Tests Development and Debugging
@@ -130,10 +131,11 @@ Core project structure is implemnted relying on the pyATS data model, thus this 
             └── smoke.py
          
 ```
-Different testscript contains its own set of testcases logically groupped together. Testcase parameters are stored in datafiles, each testscript has its own datafile. One or more testscripts are being aggregated into job files, like here:
+Different testscripts contain their own sets of testcases logically groupped together. Testcase parameters are stored in datafiles, each testscript has its own datafile. One or more testscripts are being aggregated into job files, like here:
 - jobs/smoke.py contains testscripts/smoke.py
 - jobs/regression.py contains testscripts/regression.py
 - jobs/main.py contains testscripts/socks.py, testscripts/tls.py, testscripts/browser.py
+
 Within job file testscripts are being run in specified order one by one (asynchonous run is also possible but not in our case).
 The jobs/ directory contains two more jobs: build_environment.py and destroy_environment.py which are completely anrelated to the test execution and were created to ease environment deployment. These jobs alse use scripts, which are defined in the envscripts/ directory and might not be changed.
 
