@@ -62,6 +62,7 @@ docker-compose run --rm testenv pyats run job /pyats/project/src/jobs/destroy_en
 Job execution logs can be accessed in several ways:
 - Console logs
 - pyATS view logs view command
+
 The last option, unfortunately, can not be correctly utilized with docker-compose run command but it can be used perfectly fine in the development/debug mode. Another option is the email reporting, which is implemented in in CI configuration.
 
 ## CI Setup
