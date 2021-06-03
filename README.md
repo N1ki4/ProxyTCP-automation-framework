@@ -43,7 +43,7 @@ docker-compose run --rm testenv pyats run job /pyats/project/src/jobs/build_envi
 ```
 Where YOUR_SERVICE_ACC_KEY is the Google Cloud service account key.
 
-Now environment is up and runnig so we can run tests. As mentioned in the description, there are three available test suits (or jobs, as in pyATS terminology): smoke.py, regression.py and main.py. All jobs are located in directory /pyats/project/src/jobs/ of the docker container file system. Each job requires a testbed to run on. Testbed data is contained in the testbed.yaml file located in /pyats/project/src/ directory and is passed as additional command line argument to the run job command. To find more about pyATS data model, check the official documentation. 
+Now environment is up and runnig so we can run tests. As mentioned in the description, there are three available test suits (or jobs, as in pyATS terminology): smoke.py, regression.py and main.py. All jobs are located in directory /pyats/project/src/jobs/ of the docker container file system. Each job requires a testbed to run on. Testbed data is contained in the testbed.yaml file located in /pyats/project/src/ directory and is passed as additional command line argument to the run job command. To find more about pyATS data model, check the official [documentation](https://developer.cisco.com/docs/pyats/api/). 
 
 Run tests with the following command:
 ```bash
@@ -82,7 +82,7 @@ Now log in to Jenkins dashpoard and create pipeline for each test suite in the p
    ![scm img3](docs/jenk_3.png)
 4. In the `Pipeline` section select `Pipeline Script` from the drop-down menu:
    ![srp img4](docs/jenk_4.png)
-5. Paste corresponding Groovy script from the jenkins/ directory into the script test area and click save.
+5. Paste corresponding [Groovy script](project/jenkins/) from the jenkins/ directory into the script test area and click save.
    
 Pipelines are ready and functional but few more things need to be done, which are optional but were ment to be:
 - Configure [E-mail notifiacations plugin](https://www.360logica.com/blog/email-notification-in-jenkins/)
