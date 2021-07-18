@@ -13,6 +13,7 @@ _scripts_dir = os.path.join(src.__path__[0], "envscripts")
 def main(runtime):
 
     logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger("unicon").setLevel(logging.ERROR)
     logging.getLogger("src.environment.google_cloud_setup.builder").setLevel(
         logging.INFO
     )

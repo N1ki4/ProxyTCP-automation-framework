@@ -18,6 +18,7 @@ class SeleniumGrid:
         self._loghead = f"SeleniumGrid@{device.name}"
         self._logfile = logfile
 
+    @retry_on_unicon_error
     def up(self):
         self._connect()
         self._device.grid.execute("docker-compose up --no-start")
@@ -51,7 +52,7 @@ class SeleniumGrid:
         _log.info(f"{self._loghead} - disconnected")
 
     def _connect(self):
-        self._device.connect(alias="grid")
+        self._device.connect(alias="grid", connection_timeout=240)
 
     def _disconnect(self):
         self._device.grid.disconnect()
